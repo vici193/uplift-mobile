@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CheckCircle2, Pencil, IdCard, Fingerprint, KeyRound, Settings, LogOut, ChevronRight, Camera } from "lucide-react";
+import { CheckCircle2, Pencil, LogOut, ChevronRight, Camera } from "lucide-react";
 import jeep from "@/assets/jeep.png";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { UserBottomNav } from "@/components/mobile/UserBottomNav";
 import { TopBar } from "@/components/mobile/TopBar";
+import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
@@ -11,92 +13,110 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const { en, driver, apps, handleLogout } = useSession();
 
-  const rows = [
-    { icon: Pencil, label: "Edit my information", to: "/edit" },
-    { icon: IdCard, label: "Driver's license", badge: "Verified", to: "/license" },
-    { icon: Fingerprint, label: "Link eGov PH", to: "/egov" },
-    { icon: KeyRound, label: "Password", to: "/password" },
-    { icon: Settings, label: "Settings", to: "/settings" },
-  ];
+  const initials = driver?.name ? driver.name.slice(0, 2).toUpperCase() : "??";
+  const active = apps.length;
+  const approved = apps.filter(
+    (a: any) => a.status === "approved" || a.status === "claimed",
+  ).length;
+
+  function doLogout() {
+    handleLogout();
+    navigate({ to: "/" });
+  }
 
   return (
     <MobileShell bottomNav={<UserBottomNav />}>
-      <TopBar title="My Profile" />
-      
+      <TopBar title={en ? "My Profile" : "Aking Profile"} />
+
       <div className="relative px-5 pt-4">
-        <div className="relative overflow-hidden rounded-[32px] bg-[#1b2b4b] p-6 text-white shadow-xl transition-all duration-300 hover:bg-[#253960]">
+        <div className="relative overflow-hidden rounded-[32px] bg-[#1b2b4b] p-6 text-white shadow-xl">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#f5a623_0%,transparent_70%)] opacity-10" />
-          
-          <img 
-            src={jeep} 
-            alt="Jeepney" 
-            className="absolute -right-10 -bottom--20 w-[200px] object-contain drop-shadow-2xl z-10 opacity-90 transition-transform duration-500 hover:scale-105"
+          <img
+            src={jeep}
+            alt="Jeepney"
+            className="absolute -bottom-8 -right-10 z-10 w-[200px] object-contain opacity-90 drop-shadow-2xl"
           />
 
           <div className="relative z-20 flex items-center gap-4">
             <div className="relative">
               <div className="grid h-20 w-20 place-items-center rounded-3xl bg-[#f5a623] text-2xl font-black text-[#1b2b4b] shadow-xl">
-                JS
+                {initials}
               </div>
-              <button className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-[#1b2b4b] shadow-lg transition-transform hover:scale-105">
+              <button
+                className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-[#1b2b4b] shadow-lg"
+                disabled
+                title={en ? "Not available yet" : "Hindi pa available"}
+              >
                 <Camera className="h-4 w-4" />
               </button>
             </div>
-            
+
             <div>
-              <p className="text-[18px] font-extrabold">Juan Santos</p>
-              <p className="text-[11px] text-white/70 font-medium">PUJ Driver · Metro Manila</p>
-              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
-                <CheckCircle2 className="h-3 w-3" /> Verified Driver
-              </div>
+              <p className="text-[18px] font-extrabold">
+                {driver?.name || (en ? "Driver" : "Driver")}
+              </p>
+              <p className="text-[11px] font-medium text-white/70">
+                {driver?.denomination || (en ? "PUV Driver" : "PUV Driver")}
+              </p>
+              {driver?.verification_status === "verified" && (
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold text-emerald-400">
+                  <CheckCircle2 className="h-3 w-3" />{" "}
+                  {en ? "Verified Driver" : "Verified na Driver"}
+                </div>
+              )}
+              {driver?.verification_status === "unverified" && (
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#f5a623]/30 bg-[#f5a623]/20 px-2.5 py-1 text-[10px] font-bold text-white">
+                  {en ? "Verification pending" : "Naghihintay ng Verification"}
+                </div>
+              )}
+              {driver?.verification_status === "rejected" && (
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/20 px-2.5 py-1 text-[10px] font-bold text-white">
+                  {en ? "Verification rejected" : "Tinanggihan ang Verification"}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-3 gap-2 border-t border-white/10 pt-5 text-center">
+          <div className="mt-6 grid grid-cols-2 gap-2 border-t border-white/10 pt-5 text-center">
             <div>
-              <p className="text-[16px] font-extrabold">3</p>
-              <p className="text-[9px] font-bold uppercase text-white/50 tracking-wider">Applications</p>
+              <p className="text-[16px] font-extrabold">{active}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-white/50">
+                {en ? "Applications" : "Aplikasyon"}
+              </p>
             </div>
             <div>
-              <p className="text-[16px] font-extrabold">1</p>
-              <p className="text-[9px] font-bold uppercase text-white/50 tracking-wider">Approved</p>
-            </div>
-            <div>
-              <p className="text-[16px] font-extrabold">₱6.5k</p>
-              <p className="text-[9px] font-bold uppercase text-white/50 tracking-wider">Received</p>
+              <p className="text-[16px] font-extrabold">{approved}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-white/50">
+                {en ? "Approved" : "Naaprubahan"}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="mt-6 space-y-3 px-5 pb-10">
-        {rows.map((r) => (
-          <button 
-            key={r.label} 
-            onClick={() => navigate({ to: r.to as any })}
-            className="flex w-full items-center gap-4 rounded-[24px] bg-white p-4 text-left shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-[#f0f0f0] transition-all hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]"
-          >
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#f8f9fa] text-[#1b2b4b]">
-              <r.icon className="h-5 w-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-extrabold text-[#1b2b4b]">{r.label}</p>
-            </div>
-            {"badge" in r && r.badge && (
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-extrabold text-emerald-700 uppercase">
-                {r.badge}
-              </span>
-            )}
-            <ChevronRight className="h-4 w-4 text-[#c1c1c1]" />
-          </button>
-        ))}
-        
         <button
-          onClick={() => navigate({ to: "/" })}
+          onClick={() => navigate({ to: "/edit" })}
+          className="flex w-full items-center gap-4 rounded-[24px] border border-[#f0f0f0] bg-white p-4 text-left shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]"
+        >
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#f8f9fa] text-[#1b2b4b]">
+            <Pencil className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-extrabold text-[#1b2b4b]">
+              {en ? "Edit my information" : "I-edit ang aking impormasyon"}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-[#c1c1c1]" />
+        </button>
+
+        <button
+          onClick={doLogout}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-[24px] border-2 border-red-100 bg-red-50 py-4 text-[13px] font-extrabold text-red-600 transition-all hover:bg-red-100 active:scale-95"
         >
-          <LogOut className="h-4 w-4" /> Log out
+          <LogOut className="h-4 w-4" /> {en ? "Log out" : "Sign Out"}
         </button>
       </div>
     </MobileShell>

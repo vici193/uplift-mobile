@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Phone, Loader2, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Phone, Loader2, AlertTriangle, ShieldAlert, HelpCircle } from "lucide-react";
 import logo from "@/assets/uplift-logo.png";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { useSession } from "@/lib/session-context";
@@ -9,9 +9,34 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+const tutSteps = (en: boolean) => [
+  {
+    text: en
+      ? "Click this button at the top right if you want to change the interface language between English and Filipino."
+      : "I-click ang button na ito sa kanang itaas kung gusto mong palitan ang wika ng interface sa Ingles o Filipino.",
+  },
+  {
+    text: en
+      ? "Enter your registered mobile number and your secure password here to access your account."
+      : "Ilagay ang iyong rehistradong numero ng telepono at secure na password dito upang ma-access ang iyong account.",
+  },
+  {
+    text: en
+      ? "Don't have an account yet? Click here to register and create your UPLIFT profile."
+      : "Wala ka pang account? I-click ito para mag-rehistro at gumawa ng iyong UPLIFT profile.",
+  },
+  {
+    text: en
+      ? "If you forgot your password or changed your mobile number, use these links to recover your account."
+      : "Kung nakalimutan mo ang iyong password o nagpalit ka ng numero, gamitin ang mga link na ito upang mabawi ang iyong account.",
+  },
+];
+
 function LoginPage() {
   const navigate = useNavigate();
   const { handleLogin, en, setLang } = useSession();
+  const [tutStep, setTutStep] = useState(0);
+  const steps = tutSteps(en);
 
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
@@ -60,12 +85,22 @@ function LoginPage() {
 
       <div className="sticky top-0 z-20 flex items-center justify-between gap-4 bg-[#1b2b4b]/90 px-6 pb-4 pt-8 backdrop-blur-md">
         <h1 className="text-xl font-semibold tracking-wide text-[#ffffff]">LOGIN</h1>
-        <button
-          onClick={() => setLang((l) => (l === "en" ? "fil" : "en"))}
-          className="rounded-full border border-[#ffffff]/20 bg-[#ffffff]/10 px-3 py-1.5 text-xs font-semibold text-[#ffffff]"
-        >
-          {en ? "Filipino" : "English"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTutStep(1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ffffff]/20 bg-[#ffffff]/10 text-[#f5a623]"
+            title={en ? "Open Tutorial" : "Buksan ang Tutorial"}
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+          <button
+            id="tut-step-0"
+            onClick={() => setLang((l) => (l === "en" ? "fil" : "en"))}
+            className={`rounded-full border border-[#ffffff]/20 bg-[#ffffff]/10 px-3 py-1.5 text-xs font-semibold text-[#ffffff] transition-all ${tutStep === 1 ? "relative z-[250] ring-4 ring-[#f5a623]" : ""}`}
+          >
+            {en ? "Filipino" : "English"}
+          </button>
+        </div>
       </div>
 
       <div className="relative z-10 flex flex-col px-6 pb-8 pt-2">
@@ -94,7 +129,10 @@ function LoginPage() {
           </div>
         )}
 
-        <label className="mt-10 flex flex-col gap-1.5">
+        <label
+          id="tut-step-2"
+          className={`mt-10 flex flex-col gap-1.5 rounded-2xl transition-all ${tutStep === 2 ? "relative z-[250] bg-[#1b2b4b] p-3 ring-4 ring-[#f5a623]" : ""}`}
+        >
           <span className="text-[13px] font-semibold text-[#ffffff]">
             {en ? "Mobile number" : "Numero ng Telepono"}
           </span>
@@ -132,7 +170,10 @@ function LoginPage() {
           {loading ? (en ? "Signing in..." : "Sumasagi...") : en ? "Sign In" : "Mag-Sign In"}
         </button>
 
-        <div className="mt-8 flex justify-between px-2 text-[13px] font-semibold">
+        <div
+          id="tut-step-4"
+          className={`mt-8 flex justify-between rounded-2xl px-2 text-[13px] font-semibold transition-all ${tutStep === 4 ? "relative z-[250] bg-[#1b2b4b] py-3 ring-4 ring-[#f5a623]" : ""}`}
+        >
           <Link
             to="/forgot-password"
             className="text-[#ffffff] underline underline-offset-4 transition-colors hover:text-[#f5a623]"
@@ -159,7 +200,10 @@ function LoginPage() {
           </p>
         </div>
 
-        <p className="mt-8 text-center text-sm font-medium text-[#8c8b88]">
+        <p
+          id="tut-step-3"
+          className={`mt-8 text-center text-sm font-medium text-[#8c8b88] transition-all ${tutStep === 3 ? "relative z-[250] rounded-2xl bg-[#1b2b4b] p-3 ring-4 ring-[#f5a623]" : ""}`}
+        >
           {en ? "No account yet?" : "Wala pang account?"}{" "}
           <Link
             to="/signup"
@@ -169,6 +213,36 @@ function LoginPage() {
           </Link>
         </p>
       </div>
+
+      {tutStep > 0 && (
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 p-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-xs rounded-3xl border-2 border-[#f5a623] bg-[#1b2b4b] p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-[#1b2b4b]">
+                {tutStep}/{steps.length}
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                {en ? "Sign-In Guide" : "Gabay sa Pag-Sign In"}
+              </h3>
+            </div>
+            <p className="mb-6 text-sm text-white/80">{steps[tutStep - 1].text}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTutStep(0)}
+                className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white"
+              >
+                {en ? "Skip" : "Laktawan"}
+              </button>
+              <button
+                onClick={() => (tutStep < steps.length ? setTutStep((s) => s + 1) : setTutStep(0))}
+                className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b]"
+              >
+                {tutStep === steps.length ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }
