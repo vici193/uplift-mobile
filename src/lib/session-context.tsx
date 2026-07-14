@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 // This file ports working logic directly from uplift-app's App.jsx (plain JS).
@@ -32,17 +33,17 @@ function useSessionState() {
   const [restoringSession, setRestoringSession] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
 
-  const [driver, setDriver] = useState(null);
-  const [driverId, setDriverId] = useState(null);
-  const [apps, setApps] = useState([]);
-  const [appointment, setAppointment] = useState(null);
-  const [allAppointments, setAllAppointments] = useState([]);
-  const [openEvents, setOpenEvents] = useState([]);
-  const [concerns, setConcerns] = useState([]);
+  const [driver, setDriver] = useState<any>(null);
+  const [driverId, setDriverId] = useState<any>(null);
+  const [apps, setApps] = useState<any[]>([]);
+  const [appointment, setAppointment] = useState<any>(null);
+  const [allAppointments, setAllAppointments] = useState<any[]>([]);
+  const [openEvents, setOpenEvents] = useState<any[]>([]);
+  const [concerns, setConcerns] = useState<any[]>([]);
   const [toast, setToast] = useState("");
 
-  const [modalQueue, setModalQueue] = useState([]);
-  const [currentModal, setCurrentModal] = useState(null);
+  const [modalQueue, setModalQueue] = useState<any[]>([]);
+  const [currentModal, setCurrentModal] = useState<any>(null);
 
   function showToast(msg) {
     setToast(msg);
