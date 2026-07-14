@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SessionProvider } from "../lib/session-context";
 import {
   Outlet,
   Link,
@@ -79,10 +80,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#1b2b4b" },
       { title: "UPLIFT" },
-      { name: "description", content: "Secure verification and direct subsidy applications for Filipino PUV drivers." },
+      {
+        name: "description",
+        content:
+          "Secure verification and direct subsidy applications for Filipino PUV drivers.",
+      },
       { name: "author", content: "UPLIFT" },
       { property: "og:title", content: "UPLIFT — Fast-Track Your Benefits" },
-      { property: "og:description", content: "Secure verification and direct subsidy applications for Filipino PUV drivers." },
+      {
+        property: "og:description",
+        content:
+          "Secure verification and direct subsidy applications for Filipino PUV drivers.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -108,13 +117,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
+    <head>
+      <title>UPLIFT</title>
+      <HeadContent />
+    </head>
+    <body>
+    {children}
+    <Scripts />
+    </body>
     </html>
   );
 }
@@ -124,8 +134,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <SessionProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </SessionProvider>
     </QueryClientProvider>
   );
 }
