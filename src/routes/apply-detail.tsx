@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, HelpCircle, Loader2, Info } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
@@ -15,7 +15,9 @@ import {
   dlCodeHint,
   toProperCase,
   toProperCaseKeepAcronyms,
+  cleanMobile,
 } from "@/shared";
+import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({ eventId: z.string().optional() });
 
@@ -80,6 +82,9 @@ function ApplyDetailPage() {
   const [noMiddle, setNoMiddle] = useState(false);
   const [noExtension, setNoExtension] = useState(false);
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
+
   const isVerified = driver?.verification_status === "verified";
   const shouldAutoFill = isVerified;
 
@@ -121,6 +126,66 @@ function ApplyDetailPage() {
     setForm((p) => ({ ...p, [field]: val }));
   }
 
+  function clearErr(field: string) {
+    setFieldErrors((p) => {
+      if (!p[field]) return p;
+      const n = { ...p };
+      delete n[field];
+      return n;
+    });
+  }
+
+  function validateForm() {
+    const errs: Record<string, string> = {};
+    const req = (f: keyof typeof form, msg?: string) => {
+      if (!(form[f] || "").toString().trim()) errs[f] = msg || (en ? "Required." : "Kailangan.");
+    };
+
+    req("last_name");
+    req("first_name");
+    if (!noMiddle && !form.middle_name.trim())
+      errs.middle_name = en ? "Required, or check the box." : "Kailangan, o i-check ang box.";
+    req("sex");
+    req("birth_month");
+    req("birth_day");
+    if (!form.birth_year || form.birth_year.length !== 4)
+      errs.birth_year = en ? "Enter a valid year." : "Ilagay ang tamang taon.";
+    req("age");
+
+    req("region");
+    req("province");
+    req("city");
+    req("barangay");
+
+    const cleanedMobile = cleanMobile(form.mobile);
+    if (cleanedMobile.length !== 11 || !cleanedMobile.startsWith("09")) {
+      errs.mobile = en ? "Enter a valid 11-digit mobile number." : "Ilagay ang tamang numero.";
+    }
+
+    req("denomination");
+    if (!form.case_number.trim()) errs.case_number = en ? "Required." : "Kailangan.";
+    else if (!/^\d{4}-\d{4}$/.test(form.case_number.trim())) errs.case_number = "YYYY-XXXX";
+
+    req("operator_name");
+    req("cooperative_name");
+
+    if (!form.plate_number.trim()) errs.plate_number = en ? "Required." : "Kailangan.";
+    else if (!/^[A-Z]{2,3} \d{3,4}$/.test(form.plate_number.trim())) errs.plate_number = "ABC 1234";
+
+    req("chassis_number");
+
+    if (!form.license_number.trim()) errs.license_number = en ? "Required." : "Kailangan.";
+    else if (!/^[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{6}$/.test(form.license_number.trim()))
+      errs.license_number = "C01-XX-XXXXXX";
+
+    req("ewallet_type");
+    if (form.ewallet_type === "GCash") {
+      req("ewallet_number");
+    }
+
+    return errs;
+  }
+
   // Handles the back button press safely
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -159,6 +224,16 @@ function ApplyDetailPage() {
   async function submitApplication(e: any) {
     e.preventDefault();
     if (!event) return;
+
+    // Run field validations
+    const errs = validateForm();
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      const firstKey = Object.keys(errs)[0];
+      fieldRefs.current[firstKey]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
     if (event.application_deadline && new Date(event.application_deadline) < new Date()) {
       navigate({ to: "/apply" });
       return;
@@ -257,6 +332,19 @@ function ApplyDetailPage() {
     );
   };
 
+  const inputCls = (field: keyof typeof form) =>
+    cn(
+      "w-full rounded-2xl border p-3 text-sm outline-none transition-all focus:border-[#f5a623] focus:ring-4 focus:ring-[#f5a623]/10",
+      fieldErrors[field]
+        ? "border-red-400 bg-red-50 text-red-900 placeholder:text-red-300"
+        : "border-gray-200 bg-[#f8f9fa] placeholder:text-slate-400",
+    );
+
+  const ErrorMsg = ({ field }: { field: keyof typeof form }) => {
+    if (!fieldErrors[field]) return null;
+    return <p className="mt-1 text-[11px] font-semibold text-red-500">⚠️ {fieldErrors[field]}</p>;
+  };
+
   if (loading) {
     return (
       <MobileShell>
@@ -274,10 +362,7 @@ function ApplyDetailPage() {
           <p className="text-sm text-[#8c8b88]">
             {en ? "This subsidy event was not found." : "Hindi nahanap ang event."}
           </p>
-          <button
-            onClick={handleBack}
-            className="mt-4 font-bold text-[#f5a623] underline"
-          >
+          <button onClick={handleBack} className="mt-4 font-bold text-[#f5a623] underline">
             {en ? "Back to Available Subsidies" : "Bumalik sa Available Subsidies"}
           </button>
         </div>
@@ -369,6 +454,15 @@ function ApplyDetailPage() {
           </div>
         )}
 
+        {Object.keys(fieldErrors).length > 0 && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-[13px] text-red-600">
+            ⚠️{" "}
+            {en
+              ? "Please fix the highlighted fields below."
+              : "Pakisagot nang tama ang mga naiwang impormasyon sa ibaba."}
+          </div>
+        )}
+
         <form onSubmit={submitApplication} className="flex flex-col gap-5">
           <div
             id="tut-step-1"
@@ -377,100 +471,202 @@ function ApplyDetailPage() {
             <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
               {en ? "Personal Information" : "Personal na Impormasyon"}
             </p>
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder={en ? "Last Name *" : "Apelyido *"}
-              value={form.last_name}
-              onChange={(e) => set("last_name", e.target.value)}
-              onBlur={() => set("last_name", toProperCase(form.last_name))}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder={en ? "First Name *" : "Pangalan *"}
-              value={form.first_name}
-              onChange={(e) => set("first_name", e.target.value)}
-              onBlur={() => set("first_name", toProperCase(form.first_name))}
-            />
-            <div>
+            <div
+              ref={(el) => {
+                fieldRefs.current.last_name = el;
+              }}
+            >
               <input
-                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm disabled:opacity-40"
-                placeholder={en ? "Middle Name" : "Gitnang Pangalan"}
-                value={noMiddle ? "" : form.middle_name}
-                disabled={noMiddle}
-                onChange={(e) => set("middle_name", e.target.value)}
+                className={inputCls("last_name")}
+                placeholder={en ? "Last Name *" : "Apelyido *"}
+                value={form.last_name}
+                onChange={(e) => {
+                  set("last_name", e.target.value);
+                  clearErr("last_name");
+                }}
+                onBlur={() => set("last_name", toProperCase(form.last_name))}
               />
+              <ErrorMsg field="last_name" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.first_name = el;
+              }}
+            >
+              <input
+                className={inputCls("first_name")}
+                placeholder={en ? "First Name *" : "Pangalan *"}
+                value={form.first_name}
+                onChange={(e) => {
+                  set("first_name", e.target.value);
+                  clearErr("first_name");
+                }}
+                onBlur={() => set("first_name", toProperCase(form.first_name))}
+              />
+              <ErrorMsg field="first_name" />
+            </div>
+
+            <div>
+              <div
+                ref={(el) => {
+                  fieldRefs.current.middle_name = el;
+                }}
+              >
+                <input
+                  className={cn(inputCls("middle_name"), "disabled:opacity-40")}
+                  placeholder={en ? "Middle Name" : "Gitnang Pangalan"}
+                  value={noMiddle ? "" : form.middle_name}
+                  disabled={noMiddle}
+                  onChange={(e) => {
+                    set("middle_name", e.target.value);
+                    clearErr("middle_name");
+                  }}
+                />
+                <ErrorMsg field="middle_name" />
+              </div>
               <label className="mt-1.5 flex items-center gap-2 text-[11px] text-[#8c8b88]">
                 <input
                   type="checkbox"
                   checked={noMiddle}
-                  onChange={(e) => setNoMiddle(e.target.checked)}
+                  onChange={(e) => {
+                    setNoMiddle(e.target.checked);
+                    clearErr("middle_name");
+                  }}
                 />{" "}
                 {en ? "I have no middle name" : "Wala akong gitnang pangalan"}
               </label>
             </div>
+
             <div>
-              <input
-                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm disabled:opacity-40"
-                placeholder={en ? "Extension Name (Jr, Sr, III)" : "Extension Name"}
-                value={noExtension ? "" : form.extension_name}
-                disabled={noExtension}
-                onChange={(e) => set("extension_name", e.target.value)}
-              />
+              <div
+                ref={(el) => {
+                  fieldRefs.current.extension_name = el;
+                }}
+              >
+                <input
+                  className={cn(inputCls("extension_name"), "disabled:opacity-40")}
+                  placeholder={en ? "Extension Name (Jr, Sr, III)" : "Extension Name"}
+                  value={noExtension ? "" : form.extension_name}
+                  disabled={noExtension}
+                  onChange={(e) => {
+                    set("extension_name", e.target.value);
+                    clearErr("extension_name");
+                  }}
+                />
+                <ErrorMsg field="extension_name" />
+              </div>
               <label className="mt-1.5 flex items-center gap-2 text-[11px] text-[#8c8b88]">
                 <input
                   type="checkbox"
                   checked={noExtension}
-                  onChange={(e) => setNoExtension(e.target.checked)}
+                  onChange={(e) => {
+                    setNoExtension(e.target.checked);
+                    clearErr("extension_name");
+                  }}
                 />{" "}
                 {en ? "I have no extension name" : "Wala akong extension name"}
               </label>
             </div>
-            <select
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              value={form.sex}
-              onChange={(e) => set("sex", e.target.value)}
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.sex = el;
+              }}
             >
-              <option value="">{en ? "Sex *" : "Kasarian *"}</option>
-              <option>Male</option>
-              <option>Female</option>
-              <option>Others</option>
-            </select>
-            <div className="grid grid-cols-2 gap-3">
               <select
-                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-                value={form.birth_month}
-                onChange={(e) => set("birth_month", e.target.value)}
+                className={inputCls("sex")}
+                value={form.sex}
+                onChange={(e) => {
+                  set("sex", e.target.value);
+                  clearErr("sex");
+                }}
               >
-                <option value="">{en ? "Month" : "Buwan"}</option>
-                {months.map((m) => (
-                  <option key={m}>{m}</option>
-                ))}
+                <option value="">{en ? "Sex *" : "Kasarian *"}</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Others</option>
               </select>
-              <select
-                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-                value={form.birth_day}
-                onChange={(e) => set("birth_day", e.target.value)}
-              >
-                <option value="">{en ? "Day" : "Araw"}</option>
-                {days.map((d) => (
-                  <option key={d}>{d}</option>
-                ))}
-              </select>
+              <ErrorMsg field="sex" />
             </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <input
-                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-                placeholder={en ? "Year (YYYY)" : "Taon"}
-                value={form.birth_year}
-                maxLength={4}
-                onChange={(e) => set("birth_year", e.target.value)}
-              />
-              <input
-                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-                placeholder={en ? "Age" : "Edad"}
-                value={form.age}
-                onChange={(e) => set("age", e.target.value)}
-              />
+              <div
+                ref={(el) => {
+                  fieldRefs.current.birth_month = el;
+                }}
+              >
+                <select
+                  className={inputCls("birth_month")}
+                  value={form.birth_month}
+                  onChange={(e) => {
+                    set("birth_month", e.target.value);
+                    clearErr("birth_month");
+                  }}
+                >
+                  <option value="">{en ? "Month" : "Buwan"}</option>
+                  {months.map((m) => (
+                    <option key={m}>{m}</option>
+                  ))}
+                </select>
+                <ErrorMsg field="birth_month" />
+              </div>
+              <div
+                ref={(el) => {
+                  fieldRefs.current.birth_day = el;
+                }}
+              >
+                <select
+                  className={inputCls("birth_day")}
+                  value={form.birth_day}
+                  onChange={(e) => {
+                    set("birth_day", e.target.value);
+                    clearErr("birth_day");
+                  }}
+                >
+                  <option value="">{en ? "Day" : "Araw"}</option>
+                  {days.map((d) => (
+                    <option key={d}>{d}</option>
+                  ))}
+                </select>
+                <ErrorMsg field="birth_day" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div
+                ref={(el) => {
+                  fieldRefs.current.birth_year = el;
+                }}
+              >
+                <input
+                  className={inputCls("birth_year")}
+                  placeholder={en ? "Year (YYYY)" : "Taon"}
+                  value={form.birth_year}
+                  maxLength={4}
+                  onChange={(e) => {
+                    set("birth_year", e.target.value);
+                    clearErr("birth_year");
+                  }}
+                />
+                <ErrorMsg field="birth_year" />
+              </div>
+              <div
+                ref={(el) => {
+                  fieldRefs.current.age = el;
+                }}
+              >
+                <input
+                  className={inputCls("age")}
+                  placeholder={en ? "Age" : "Edad"}
+                  value={form.age}
+                  onChange={(e) => {
+                    set("age", e.target.value);
+                    clearErr("age");
+                  }}
+                />
+                <ErrorMsg field="age" />
+              </div>
             </div>
             {renderTutorialCard(
               1,
@@ -483,38 +679,92 @@ function ApplyDetailPage() {
             className={`flex flex-col gap-3 rounded-2xl transition-all ${tutStep === 2 ? "relative z-[250] bg-white p-3 shadow-2xl ring-4 ring-[#f5a623]" : ""}`}
           >
             <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
-              {en ? "Address" : "Tirahan"}
+              {en ? "Address & Contact" : "Tirahan at Kontak"}
             </p>
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder="Region"
-              value={form.region}
-              onChange={(e) => set("region", e.target.value)}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder="Province"
-              value={form.province}
-              onChange={(e) => set("province", e.target.value)}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder={en ? "City / Municipality" : "Lungsod"}
-              value={form.city}
-              onChange={(e) => set("city", e.target.value)}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder="Barangay"
-              value={form.barangay}
-              onChange={(e) => set("barangay", e.target.value)}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder={en ? "Contact Number *" : "Numero ng Kontak *"}
-              value={formatMobileDisplay(form.mobile)}
-              onChange={(e) => set("mobile", formatMobileDisplay(e.target.value))}
-            />
+            <div
+              ref={(el) => {
+                fieldRefs.current.region = el;
+              }}
+            >
+              <input
+                className={inputCls("region")}
+                placeholder="Region *"
+                value={form.region}
+                onChange={(e) => {
+                  set("region", e.target.value);
+                  clearErr("region");
+                }}
+              />
+              <ErrorMsg field="region" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.province = el;
+              }}
+            >
+              <input
+                className={inputCls("province")}
+                placeholder="Province *"
+                value={form.province}
+                onChange={(e) => {
+                  set("province", e.target.value);
+                  clearErr("province");
+                }}
+              />
+              <ErrorMsg field="province" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.city = el;
+              }}
+            >
+              <input
+                className={inputCls("city")}
+                placeholder={en ? "City / Municipality *" : "Lungsod *"}
+                value={form.city}
+                onChange={(e) => {
+                  set("city", e.target.value);
+                  clearErr("city");
+                }}
+              />
+              <ErrorMsg field="city" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.barangay = el;
+              }}
+            >
+              <input
+                className={inputCls("barangay")}
+                placeholder="Barangay *"
+                value={form.barangay}
+                onChange={(e) => {
+                  set("barangay", e.target.value);
+                  clearErr("barangay");
+                }}
+              />
+              <ErrorMsg field="barangay" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.mobile = el;
+              }}
+            >
+              <input
+                className={inputCls("mobile")}
+                placeholder={en ? "Contact Number *" : "Numero ng Kontak *"}
+                value={formatMobileDisplay(form.mobile)}
+                onChange={(e) => {
+                  set("mobile", formatMobileDisplay(e.target.value));
+                  clearErr("mobile");
+                }}
+              />
+              <ErrorMsg field="mobile" />
+            </div>
             {renderTutorialCard(
               2,
               "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
@@ -528,57 +778,131 @@ function ApplyDetailPage() {
             <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
               {en ? "Vehicle and Franchise" : "Sasakyan at Pransisa"}
             </p>
-            <select
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              value={form.denomination}
-              onChange={(e) => set("denomination", e.target.value)}
+            <div
+              ref={(el) => {
+                fieldRefs.current.denomination = el;
+              }}
             >
-              <option value="">{en ? "Denomination *" : "Uri ng Sasakyan *"}</option>
-              {denominations.map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder="Case Number * (2020-XXXX)"
-              value={form.case_number}
-              onChange={(e) => set("case_number", formatCaseNumber(e.target.value))}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder={en ? "Operator's Name *" : "Pangalan ng Operator *"}
-              value={form.operator_name}
-              onChange={(e) => set("operator_name", e.target.value)}
-              onBlur={() => set("operator_name", toProperCaseKeepAcronyms(form.operator_name))}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder={en ? "Cooperative Name *" : "Pangalan ng Kooperatiba *"}
-              value={form.cooperative_name}
-              onChange={(e) => set("cooperative_name", e.target.value)}
-              onBlur={() =>
-                set("cooperative_name", toProperCaseKeepAcronyms(form.cooperative_name))
-              }
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder="Plate Number * (ABC 1234)"
-              value={form.plate_number}
-              onChange={(e) => set("plate_number", formatPlateNumber(e.target.value))}
-            />
-            <input
-              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-              placeholder="Chassis Number *"
-              value={form.chassis_number}
-              onChange={(e) => set("chassis_number", e.target.value)}
-            />
-            <div>
+              <select
+                className={inputCls("denomination")}
+                value={form.denomination}
+                onChange={(e) => {
+                  set("denomination", e.target.value);
+                  clearErr("denomination");
+                }}
+              >
+                <option value="">{en ? "Denomination *" : "Uri ng Sasakyan *"}</option>
+                {denominations.map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
+              </select>
+              <ErrorMsg field="denomination" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.case_number = el;
+              }}
+            >
               <input
-                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                className={inputCls("case_number")}
+                placeholder="Case Number * (2020-XXXX)"
+                value={form.case_number}
+                onChange={(e) => {
+                  set("case_number", formatCaseNumber(e.target.value));
+                  clearErr("case_number");
+                }}
+              />
+              <ErrorMsg field="case_number" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.operator_name = el;
+              }}
+            >
+              <input
+                className={inputCls("operator_name")}
+                placeholder={en ? "Operator's Name *" : "Pangalan ng Operator *"}
+                value={form.operator_name}
+                onChange={(e) => {
+                  set("operator_name", e.target.value);
+                  clearErr("operator_name");
+                }}
+                onBlur={() => set("operator_name", toProperCaseKeepAcronyms(form.operator_name))}
+              />
+              <ErrorMsg field="operator_name" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.cooperative_name = el;
+              }}
+            >
+              <input
+                className={inputCls("cooperative_name")}
+                placeholder={en ? "Cooperative Name *" : "Pangalan ng Kooperatiba *"}
+                value={form.cooperative_name}
+                onChange={(e) => {
+                  set("cooperative_name", e.target.value);
+                  clearErr("cooperative_name");
+                }}
+                onBlur={() =>
+                  set("cooperative_name", toProperCaseKeepAcronyms(form.cooperative_name))
+                }
+              />
+              <ErrorMsg field="cooperative_name" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.plate_number = el;
+              }}
+            >
+              <input
+                className={inputCls("plate_number")}
+                placeholder="Plate Number * (ABC 1234)"
+                value={form.plate_number}
+                onChange={(e) => {
+                  set("plate_number", formatPlateNumber(e.target.value));
+                  clearErr("plate_number");
+                }}
+              />
+              <ErrorMsg field="plate_number" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.chassis_number = el;
+              }}
+            >
+              <input
+                className={inputCls("chassis_number")}
+                placeholder="Chassis Number *"
+                value={form.chassis_number}
+                onChange={(e) => {
+                  set("chassis_number", e.target.value);
+                  clearErr("chassis_number");
+                }}
+              />
+              <ErrorMsg field="chassis_number" />
+            </div>
+
+            <div
+              ref={(el) => {
+                fieldRefs.current.license_number = el;
+              }}
+            >
+              <input
+                className={inputCls("license_number")}
                 placeholder={`${en ? "Driver's License No. *" : "License No. *"} (${licenseNumberPlaceholder(form.denomination)})`}
                 value={form.license_number}
-                onChange={(e) => set("license_number", formatLicenseNumber(e.target.value))}
+                onChange={(e) => {
+                  set("license_number", formatLicenseNumber(e.target.value));
+                  clearErr("license_number");
+                }}
               />
+              <ErrorMsg field="license_number" />
               {form.denomination && (
                 <p className="mt-1 text-[10px] text-[#8c8b88]">
                   {dlCodeHint(form.denomination, en)}
@@ -598,16 +922,23 @@ function ApplyDetailPage() {
             <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
               {en ? "Disbursement" : "Pagpapalabas ng Pondo"}
             </p>
-            <div>
+            <div
+              ref={(el) => {
+                fieldRefs.current.ewallet_type = el;
+              }}
+            >
               <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
                 {en
                   ? "How would you like to receive this subsidy? *"
                   : "Paano mo nais matanggap ang subsidy na ito? *"}
               </label>
               <select
-                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                className={inputCls("ewallet_type")}
                 value={form.ewallet_type}
-                onChange={(e) => set("ewallet_type", e.target.value)}
+                onChange={(e) => {
+                  set("ewallet_type", e.target.value);
+                  clearErr("ewallet_type");
+                }}
               >
                 <option value="">
                   {en ? "Select a disbursement method..." : "Pumili ng paraan ng pagbabayad..."}
@@ -619,9 +950,15 @@ function ApplyDetailPage() {
                 </option>
                 <option value="GCash">GCash</option>
               </select>
+              <ErrorMsg field="ewallet_type" />
             </div>
+
             {form.ewallet_type === "GCash" && (
-              <div>
+              <div
+                ref={(el) => {
+                  fieldRefs.current.ewallet_number = el;
+                }}
+              >
                 <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
                   {en ? "GCash Account Number *" : "Numero ng GCash Account *"}{" "}
                   <span className="font-normal text-[#8c8b88]">
@@ -629,11 +966,15 @@ function ApplyDetailPage() {
                   </span>
                 </label>
                 <input
-                  className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                  className={inputCls("ewallet_number")}
                   placeholder="0996-XXX-XXXX"
                   value={form.ewallet_number}
-                  onChange={(e) => set("ewallet_number", e.target.value)}
+                  onChange={(e) => {
+                    set("ewallet_number", e.target.value);
+                    clearErr("ewallet_number");
+                  }}
                 />
+                <ErrorMsg field="ewallet_number" />
               </div>
             )}
             {renderTutorialCard(
