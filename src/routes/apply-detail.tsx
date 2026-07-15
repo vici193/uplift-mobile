@@ -1,129 +1,665 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+import { ArrowLeft, HelpCircle, Loader2, Info } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
-import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/session-context";
+import { supabase } from "@/supabase";
+import {
+  formatCaseNumber,
+  formatLicenseNumber,
+  formatMobileDisplay,
+  formatPlateNumber,
+  licenseNumberPlaceholder,
+  dlCodeHint,
+  toProperCase,
+  toProperCaseKeepAcronyms,
+} from "@/shared";
+
+const searchSchema = z.object({ eventId: z.string().optional() });
 
 export const Route = createFileRoute("/apply-detail")({
-  component: ApplyDetail,
+  component: ApplyDetailPage,
+  validateSearch: searchSchema,
 });
 
-function Field({ label, required, ...props }: { label: string; required?: boolean } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[11px] font-bold text-[#1b2b4b]/70 uppercase">
-        {label} {required && <span className="text-[#f5a623]">*</span>}
-      </label>
-      <input
-        {...props}
-        className="w-full rounded-2xl border-2 border-gray-100 bg-gray-50 px-4 py-3.5 text-sm font-medium text-[#1b2b4b] outline-none transition-all focus:border-[#f5a623] focus:bg-white focus:ring-4 focus:ring-[#f5a623]/10"
-      />
-    </div>
-  );
-}
+const months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const days = Array.from({ length: 31 }, (_, i) => String(i + 1));
+const denominations = [
+  "MPUJ",
+  "TPUJ",
+  "MUVE",
+  "TUVE",
+  "MPUB",
+  "PUB",
+  "Mini-Bus",
+  "School Transport",
+  "Taxi",
+];
 
-function SectionHeader({ title }: { title: string }) {
-  return <h3 className="text-[11px] font-black text-[#1b2b4b]/50 uppercase tracking-widest pt-4 pb-2">{title}</h3>;
-}
+const tutSteps = (en: boolean) => [
+  en
+    ? "Fill in your Personal Information exactly as it appears on your Driver's License."
+    : "Punan ang iyong Personal na Impormasyon nang eksaktong tugma sa iyong Driver's License.",
+  en
+    ? "Your Address helps the agency confirm you're within the coverage area for this subsidy."
+    : "Ang iyong Tirahan ay tumutulong sa ahensya na kumpirmahin kung nasa saklaw ka ng subsidy na ito.",
+  en
+    ? "Your Vehicle and Franchise details must match your official documents exactly — mismatches are one of the most common reasons for rejection."
+    : "Dapat eksaktong tugma ang iyong Sasakyan at Pransisa sa opisyal na dokumento — isa ito sa pinakakaraniwang dahilan ng pagkatanggi.",
+  en
+    ? "Choose how you'd like to receive this subsidy — cash at the venue, or straight to your GCash. If you pick GCash, make sure the account is registered in your own name."
+    : "Piliin kung paano mo nais matanggap ang subsidy na ito — cash sa venue, o diretso sa iyong GCash. Kung GCash ang piliin, siguraduhing nakalaan ito sa sarili mong pangalan.",
+];
 
-function ApplyDetail() {
+function ApplyDetailPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const { eventId } = Route.useSearch();
+  const { en, driver, driverId, refreshApps } = useSession();
+
+  const [event, setEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [tutStep, setTutStep] = useState(0);
+  const steps = tutSteps(en);
+  const [noMiddle, setNoMiddle] = useState(false);
+  const [noExtension, setNoExtension] = useState(false);
+
+  const isVerified = driver?.verification_status === "verified";
+  const shouldAutoFill = isVerified;
+
+  const [form, setForm] = useState({
+    last_name: shouldAutoFill ? driver?.last_name || "" : "",
+    first_name: shouldAutoFill ? driver?.first_name || "" : "",
+    middle_name: shouldAutoFill
+      ? driver?.middle_name === "N/A"
+        ? ""
+        : driver?.middle_name || ""
+      : "",
+    extension_name: shouldAutoFill
+      ? driver?.extension_name === "N/A"
+        ? ""
+        : driver?.extension_name || ""
+      : "",
+    sex: shouldAutoFill ? driver?.sex || "" : "",
+    birth_month: shouldAutoFill ? driver?.birth_month || "" : "",
+    birth_day: shouldAutoFill ? driver?.birth_day || "" : "",
+    birth_year: shouldAutoFill ? driver?.birth_year || "" : "",
+    age: shouldAutoFill ? driver?.age || "" : "",
+    region: shouldAutoFill ? driver?.region || "" : "",
+    province: shouldAutoFill ? driver?.province || "" : "",
+    city: shouldAutoFill ? driver?.city || "" : "",
+    barangay: shouldAutoFill ? driver?.barangay || "" : "",
+    mobile: shouldAutoFill ? driver?.mobile || "" : "",
+    denomination: shouldAutoFill ? driver?.denomination || "" : "",
+    case_number: shouldAutoFill ? driver?.case_number || "" : "",
+    operator_name: shouldAutoFill ? driver?.operator_name || "" : "",
+    cooperative_name: shouldAutoFill ? driver?.cooperative_name || "" : "",
+    plate_number: shouldAutoFill ? driver?.plate_number || "" : "",
+    chassis_number: shouldAutoFill ? driver?.chassis_number || "" : "",
+    license_number: shouldAutoFill ? driver?.license_number || "" : "",
+    ewallet_type: "",
+    ewallet_number: "",
+  });
+
+  function set(field: string, val: string) {
+    setForm((p) => ({ ...p, [field]: val }));
+  }
+
+  // Handles the back button press safely
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigate({ to: "/apply" });
+    }
+  };
+
+  useEffect(() => {
+    async function load() {
+      if (!eventId) {
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase.from("payout_events").select("*").eq("id", eventId).single();
+      setEvent(data);
+      setLoading(false);
+    }
+    load();
+  }, [eventId]);
+
+  useEffect(() => {
+    if (tutStep > 0) {
+      const el = document.getElementById(`tut-step-${tutStep}`);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        window.scrollTo({
+          top: window.scrollY + rect.top - window.innerHeight * 0.18,
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [tutStep]);
+
+  async function submitApplication(e: any) {
+    e.preventDefault();
+    if (!event) return;
+    if (event.application_deadline && new Date(event.application_deadline) < new Date()) {
+      navigate({ to: "/apply" });
+      return;
+    }
+    setSubmitting(true);
+
+    const { data: existingApps } = await supabase
+      .from("applications")
+      .select("id, status")
+      .eq("driver_id", driverId)
+      .eq("event_id", event.id);
+
+    let errorObj;
+    if (existingApps && existingApps.length > 0) {
+      const targetAppId = existingApps[0].id;
+      const { error } = await supabase
+        .from("applications")
+        .update({
+          status: "pending",
+          applied_at: new Date().toISOString(),
+          rejection_fields: null,
+          rejection_has_fields: false,
+          admin_message: null,
+        })
+        .eq("id", targetAppId);
+      errorObj = error;
+      if (existingApps.length > 1) {
+        const extraIds = existingApps.slice(1).map((a: any) => a.id);
+        await supabase.from("applications").delete().in("id", extraIds);
+      }
+    } else {
+      const { error } = await supabase.from("applications").insert({
+        driver_id: driverId,
+        event_id: event.id,
+        status: "pending",
+        applied_at: new Date().toISOString(),
+      });
+      errorObj = error;
+    }
+
+    setSubmitting(false);
+    if (errorObj) {
+      alert(en ? "Something went wrong. Please try again." : "May nangyaring mali. Subukan muli.");
+      return;
+    }
+
+    try {
+      const key = `uplift_archived_${driverId}`;
+      const saved = JSON.parse(localStorage.getItem(key) || "[]");
+      localStorage.setItem(key, JSON.stringify(saved.filter((id: string) => id !== event.id)));
+    } catch {
+      /* ignore */
+    }
+
+    await refreshApps();
+    navigate({ to: "/subsidies" });
+  }
+
+  const renderTutorialCard = (stepNum: number, positionClasses: string) => {
+    if (tutStep !== stepNum) return null;
+    return (
+      <div
+        className={`absolute z-[300] rounded-3xl border-2 border-[#f5a623] bg-[#1b2b4b] p-6 shadow-2xl ${positionClasses}`}
+      >
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-[#1b2b4b]">
+            {tutStep}/{steps.length}
+          </div>
+          <h3 className="text-lg font-bold text-white">
+            {en ? "Application Guide" : "Gabay sa Aplikasyon"}
+          </h3>
+        </div>
+        <p className="mb-6 text-sm text-white/80">{steps[tutStep - 1]}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              setTutStep(0);
+            }}
+            className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+          >
+            {en ? "Skip" : "Laktawan"}
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              if (tutStep < 4) setTutStep((s) => s + 1);
+              else setTutStep(0);
+            }}
+            className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
+          >
+            {tutStep === 4 ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <MobileShell>
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[#f5a623]" />
+        </div>
+      </MobileShell>
+    );
+  }
+
+  if (!event) {
+    return (
+      <MobileShell>
+        <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+          <p className="text-sm text-[#8c8b88]">
+            {en ? "This subsidy event was not found." : "Hindi nahanap ang event."}
+          </p>
+          <button
+            onClick={handleBack}
+            className="mt-4 font-bold text-[#f5a623] underline"
+          >
+            {en ? "Back to Available Subsidies" : "Bumalik sa Available Subsidies"}
+          </button>
+        </div>
+      </MobileShell>
+    );
+  }
 
   return (
-    <MobileShell className="bg-white min-h-screen">
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-6 py-6 border-b border-gray-100 flex items-center gap-4">
-        <button onClick={() => step > 1 ? setStep(s => s - 1) : navigate({ to: "/apply" })} className="h-10 w-10 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-colors">
-          <ChevronLeft size={20} className="text-[#1b2b4b]" />
+    <MobileShell>
+      <div className="sticky top-0 z-20 flex items-center gap-4 border-b border-gray-100 bg-white/90 px-6 pb-4 pt-8 backdrop-blur-xl">
+        <button
+          onClick={handleBack}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
+        >
+          <ArrowLeft className="h-5 w-5 text-[#1b2b4b]" />
         </button>
-        <h1 className="text-[16px] font-bold text-[#1b2b4b]">Apply for Subsidy</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-bold text-[#1b2b4b]">
+            {en ? "Apply for Subsidy" : "Mag-apply ng Subsidy"}
+          </h1>
+          <p className="truncate text-[12px] text-[#8c8b88]">
+            {event.program_name} · ₱{event.program_amount}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => setShowHelp((s) => !s)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-[#1b2b4b]"
+            title={en ? "Quick tips" : "Mga Tip"}
+          >
+            <Info className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setTutStep(1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-[#f5a623]"
+            title={en ? "Open guided tutorial" : "Buksan ang Gabay"}
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <div className="px-6 py-8">
-        <div className="flex gap-1.5 mb-8">
-          {[1, 2, 3, 4].map((n) => (
-            <div key={n} className={cn("h-1.5 flex-1 rounded-full transition-colors", n <= step ? "bg-[#f5a623]" : "bg-gray-100")} />
-          ))}
-        </div>
+      {tutStep > 0 && <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]" />}
 
-        <div className="bg-[#1b2b4b] rounded-full flex items-center gap-3 mb-8 p-3 px-4 shadow-lg">
-          <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center bg-white/10">
-            <Check className="text-[#f5a623]" size={16} />
-          </div>
-          <p className="text-[12px] font-semibold text-white">Verified profile — details auto-filled.</p>
-        </div>
-
-        {step === 1 && (
-          <div className="space-y-4">
-            <SectionHeader title="Personal Information" />
-            <Field label="Last Name" required defaultValue="Santos" />
-            <Field label="First Name" required defaultValue="Juan" />
-            <Field label="Middle Name" required defaultValue="Dela Cruz" />
-            <Field label="Extension Name" placeholder="e.g. Jr" />
-            <Field label="Sex" defaultValue="Male" />
-            <SectionHeader title="Date of Birth" />
-            <div className="grid grid-cols-3 gap-3">
-                <Field label="Month" defaultValue="October" />
-                <Field label="Day" defaultValue="19" />
-                <Field label="Year" defaultValue="1985" />
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-4">
-            <SectionHeader title="Address" />
-            <Field label="Region" defaultValue="NCR" />
-            <Field label="Province" defaultValue="Metro Manila" />
-            <Field label="City / Municipality" defaultValue="Quezon City" />
-            <Field label="Barangay" defaultValue="Poblacion" />
-            <SectionHeader title="Contact" />
-            <Field label="Mobile Number" required defaultValue="0917 123 4567" />
+      <div className="flex flex-col gap-4 px-6 pb-24 pt-4">
+        {showHelp && (
+          <div className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-4 text-[12px] leading-relaxed text-[#1b2b4b]">
+            <p className="mb-2 flex items-center gap-1.5 font-bold text-[#1b2b4b]">
+              <Info className="h-3.5 w-3.5" /> {en ? "Tips for a smooth application" : "Mga Tip"}
+            </p>
+            <ul className="list-disc space-y-1 pl-4 text-[#8c8b88]">
+              <li>
+                {en
+                  ? "Your name must match your Driver's License exactly."
+                  : "Dapat eksaktong tugma ang pangalan sa Driver's License."}
+              </li>
+              <li>
+                {en
+                  ? 'No middle/extension name? Type "N/A" instead of leaving it blank.'
+                  : 'Walang middle/extension name? I-type ang "N/A".'}
+              </li>
+              <li>
+                {en
+                  ? "Double-check your e-wallet number and type."
+                  : "I-double-check ang e-wallet number at type."}
+              </li>
+              <li>
+                {en
+                  ? "Make sure plate and chassis numbers match official documents."
+                  : "Siguraduhing tugma ang plate at chassis number."}
+              </li>
+            </ul>
           </div>
         )}
 
-        {step === 3 && (
-          <div className="space-y-4">
-            <SectionHeader title="Vehicle and Franchise" />
-            <Field label="Denomination" required defaultValue="MPUJ" />
-            <Field label="Case Number" required defaultValue="2020-1212" />
-            <Field label="Operator's Name" required defaultValue="JODA" />
-            <Field label="Plate Number" required defaultValue="ABC 1234" />
-            <Field label="Chassis Number" required defaultValue="1234567890" />
-            <Field label="Driver's License No." required defaultValue="C01-12-345678" />
+        {isVerified ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[13px] text-[#1b2b4b]">
+            ✅{" "}
+            {en
+              ? "Your account is verified. Details have been pre-filled from your profile."
+              : "Na-verify ang account. Pre-filled na ang mga detalye."}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-[#f5a623]/30 bg-[#fffaf0] p-3 text-[13px] text-[#1b2b4b]">
+            ℹ️{" "}
+            {en
+              ? "Your account is not yet verified, so this form starts blank."
+              : "Hindi pa na-verify ang account, kaya blangko ang form na ito."}
           </div>
         )}
 
-        {step === 4 && (
-          <div className="space-y-4">
-            <SectionHeader title="E-wallet" />
-            <Field label="E-wallet Name" required defaultValue="GCash" />
-            <Field label="Account Number" required defaultValue="0945 977 7262" />
-            <label className="flex items-center gap-3 pt-4 cursor-pointer group">
-              <input type="checkbox" className="w-5 h-5 accent-[#f5a623]" />
-              <span className="text-[12px] font-bold text-[#1b2b4b]">I certify that all information is true.</span>
-            </label>
-          </div>
-        )}
-
-        <div className="mt-10 flex flex-col gap-3">
-          <button 
-            onClick={() => step < 4 ? setStep(s => s + 1) : navigate({ to: "/subsidies" })}
-            className="w-full flex items-center justify-center gap-2 rounded-full bg-[#f5a623] py-4 text-[14px] font-bold text-[#1b2b4b] shadow-lg transition-all hover:bg-[#f5a623]/90 hover:scale-[1.01] active:scale-[0.98]"
+        <form onSubmit={submitApplication} className="flex flex-col gap-5">
+          <div
+            id="tut-step-1"
+            className={`flex flex-col gap-3 rounded-2xl transition-all ${tutStep === 1 ? "relative z-[250] bg-white p-3 shadow-2xl ring-4 ring-[#f5a623]" : ""}`}
           >
-            {step === 4 ? "Submit Application" : "Continue"}
-            {step < 4 && <ChevronRight size={18} />}
-          </button>
-          
-          {step === 4 && (
-            <button 
-              onClick={() => navigate({ to: "/apply" })}
-              className="w-full flex items-center justify-center gap-2 rounded-full bg-white py-4 text-[14px] font-bold text-red-500 border border-red-100 hover:bg-red-50 transition-all active:scale-[0.98]"
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
+              {en ? "Personal Information" : "Personal na Impormasyon"}
+            </p>
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder={en ? "Last Name *" : "Apelyido *"}
+              value={form.last_name}
+              onChange={(e) => set("last_name", e.target.value)}
+              onBlur={() => set("last_name", toProperCase(form.last_name))}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder={en ? "First Name *" : "Pangalan *"}
+              value={form.first_name}
+              onChange={(e) => set("first_name", e.target.value)}
+              onBlur={() => set("first_name", toProperCase(form.first_name))}
+            />
+            <div>
+              <input
+                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm disabled:opacity-40"
+                placeholder={en ? "Middle Name" : "Gitnang Pangalan"}
+                value={noMiddle ? "" : form.middle_name}
+                disabled={noMiddle}
+                onChange={(e) => set("middle_name", e.target.value)}
+              />
+              <label className="mt-1.5 flex items-center gap-2 text-[11px] text-[#8c8b88]">
+                <input
+                  type="checkbox"
+                  checked={noMiddle}
+                  onChange={(e) => setNoMiddle(e.target.checked)}
+                />{" "}
+                {en ? "I have no middle name" : "Wala akong gitnang pangalan"}
+              </label>
+            </div>
+            <div>
+              <input
+                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm disabled:opacity-40"
+                placeholder={en ? "Extension Name (Jr, Sr, III)" : "Extension Name"}
+                value={noExtension ? "" : form.extension_name}
+                disabled={noExtension}
+                onChange={(e) => set("extension_name", e.target.value)}
+              />
+              <label className="mt-1.5 flex items-center gap-2 text-[11px] text-[#8c8b88]">
+                <input
+                  type="checkbox"
+                  checked={noExtension}
+                  onChange={(e) => setNoExtension(e.target.checked)}
+                />{" "}
+                {en ? "I have no extension name" : "Wala akong extension name"}
+              </label>
+            </div>
+            <select
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              value={form.sex}
+              onChange={(e) => set("sex", e.target.value)}
             >
-              <X size={16} /> Cancel Application
+              <option value="">{en ? "Sex *" : "Kasarian *"}</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Others</option>
+            </select>
+            <div className="grid grid-cols-2 gap-3">
+              <select
+                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                value={form.birth_month}
+                onChange={(e) => set("birth_month", e.target.value)}
+              >
+                <option value="">{en ? "Month" : "Buwan"}</option>
+                {months.map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+              <select
+                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                value={form.birth_day}
+                onChange={(e) => set("birth_day", e.target.value)}
+              >
+                <option value="">{en ? "Day" : "Araw"}</option>
+                {days.map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                placeholder={en ? "Year (YYYY)" : "Taon"}
+                value={form.birth_year}
+                maxLength={4}
+                onChange={(e) => set("birth_year", e.target.value)}
+              />
+              <input
+                className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                placeholder={en ? "Age" : "Edad"}
+                value={form.age}
+                onChange={(e) => set("age", e.target.value)}
+              />
+            </div>
+            {renderTutorialCard(
+              1,
+              "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+            )}
+          </div>
+
+          <div
+            id="tut-step-2"
+            className={`flex flex-col gap-3 rounded-2xl transition-all ${tutStep === 2 ? "relative z-[250] bg-white p-3 shadow-2xl ring-4 ring-[#f5a623]" : ""}`}
+          >
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
+              {en ? "Address" : "Tirahan"}
+            </p>
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder="Region"
+              value={form.region}
+              onChange={(e) => set("region", e.target.value)}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder="Province"
+              value={form.province}
+              onChange={(e) => set("province", e.target.value)}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder={en ? "City / Municipality" : "Lungsod"}
+              value={form.city}
+              onChange={(e) => set("city", e.target.value)}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder="Barangay"
+              value={form.barangay}
+              onChange={(e) => set("barangay", e.target.value)}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder={en ? "Contact Number *" : "Numero ng Kontak *"}
+              value={formatMobileDisplay(form.mobile)}
+              onChange={(e) => set("mobile", formatMobileDisplay(e.target.value))}
+            />
+            {renderTutorialCard(
+              2,
+              "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+            )}
+          </div>
+
+          <div
+            id="tut-step-3"
+            className={`flex flex-col gap-3 rounded-2xl transition-all ${tutStep === 3 ? "relative z-[250] bg-white p-3 shadow-2xl ring-4 ring-[#f5a623]" : ""}`}
+          >
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
+              {en ? "Vehicle and Franchise" : "Sasakyan at Pransisa"}
+            </p>
+            <select
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              value={form.denomination}
+              onChange={(e) => set("denomination", e.target.value)}
+            >
+              <option value="">{en ? "Denomination *" : "Uri ng Sasakyan *"}</option>
+              {denominations.map((d) => (
+                <option key={d}>{d}</option>
+              ))}
+            </select>
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder="Case Number * (2020-XXXX)"
+              value={form.case_number}
+              onChange={(e) => set("case_number", formatCaseNumber(e.target.value))}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder={en ? "Operator's Name *" : "Pangalan ng Operator *"}
+              value={form.operator_name}
+              onChange={(e) => set("operator_name", e.target.value)}
+              onBlur={() => set("operator_name", toProperCaseKeepAcronyms(form.operator_name))}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder={en ? "Cooperative Name *" : "Pangalan ng Kooperatiba *"}
+              value={form.cooperative_name}
+              onChange={(e) => set("cooperative_name", e.target.value)}
+              onBlur={() =>
+                set("cooperative_name", toProperCaseKeepAcronyms(form.cooperative_name))
+              }
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder="Plate Number * (ABC 1234)"
+              value={form.plate_number}
+              onChange={(e) => set("plate_number", formatPlateNumber(e.target.value))}
+            />
+            <input
+              className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+              placeholder="Chassis Number *"
+              value={form.chassis_number}
+              onChange={(e) => set("chassis_number", e.target.value)}
+            />
+            <div>
+              <input
+                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                placeholder={`${en ? "Driver's License No. *" : "License No. *"} (${licenseNumberPlaceholder(form.denomination)})`}
+                value={form.license_number}
+                onChange={(e) => set("license_number", formatLicenseNumber(e.target.value))}
+              />
+              {form.denomination && (
+                <p className="mt-1 text-[10px] text-[#8c8b88]">
+                  {dlCodeHint(form.denomination, en)}
+                </p>
+              )}
+            </div>
+            {renderTutorialCard(
+              3,
+              "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+            )}
+          </div>
+
+          <div
+            id="tut-step-4"
+            className={`flex flex-col gap-3 rounded-2xl transition-all ${tutStep === 4 ? "relative z-[250] bg-white p-3 shadow-2xl ring-4 ring-[#f5a623]" : ""}`}
+          >
+            <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
+              {en ? "Disbursement" : "Pagpapalabas ng Pondo"}
+            </p>
+            <div>
+              <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
+                {en
+                  ? "How would you like to receive this subsidy? *"
+                  : "Paano mo nais matanggap ang subsidy na ito? *"}
+              </label>
+              <select
+                className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                value={form.ewallet_type}
+                onChange={(e) => set("ewallet_type", e.target.value)}
+              >
+                <option value="">
+                  {en ? "Select a disbursement method..." : "Pumili ng paraan ng pagbabayad..."}
+                </option>
+                <option value="Cash">
+                  {en
+                    ? "Cash (claim in person at the venue)"
+                    : "Cash (kunin nang personal sa venue)"}
+                </option>
+                <option value="GCash">GCash</option>
+              </select>
+            </div>
+            {form.ewallet_type === "GCash" && (
+              <div>
+                <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
+                  {en ? "GCash Account Number *" : "Numero ng GCash Account *"}{" "}
+                  <span className="font-normal text-[#8c8b88]">
+                    {en ? "must be registered in your name" : "dapat sa iyong pangalan"}
+                  </span>
+                </label>
+                <input
+                  className="w-full rounded-2xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                  placeholder="0996-XXX-XXXX"
+                  value={form.ewallet_number}
+                  onChange={(e) => set("ewallet_number", e.target.value)}
+                />
+              </div>
+            )}
+            {renderTutorialCard(
+              4,
+              "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+            )}
+          </div>
+
+          <div id="tut-step-5" className="flex flex-col gap-3">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex items-center justify-center gap-2 rounded-full bg-[#f5a623] py-4 font-bold text-[#1b2b4b] disabled:opacity-60"
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}{" "}
+              {submitting ? "..." : en ? "Submit Application" : "Isumite ang Aplikasyon"}
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={handleBack}
+              className="rounded-full border-2 border-[#1b2b4b]/20 py-4 font-bold text-[#1b2b4b]"
+            >
+              {en ? "Cancel" : "Kanselahin"}
+            </button>
+          </div>
+        </form>
       </div>
     </MobileShell>
   );

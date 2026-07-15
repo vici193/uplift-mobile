@@ -28,7 +28,7 @@ function ProfilePage() {
 
   return (
     <MobileShell bottomNav={<UserBottomNav />}>
-      <TopBar title={en ? "My Profile" : "Aking Profile"} />
+      <TopBar title={en ? "My Profile" : "Aking Pagkakakilanlan"} />
 
       <div className="relative px-5 pt-4">
         <div className="relative overflow-hidden rounded-[32px] bg-[#1b2b4b] p-6 text-white shadow-xl">
@@ -47,7 +47,7 @@ function ProfilePage() {
               <button
                 className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-[#1b2b4b] shadow-lg"
                 disabled
-                title={en ? "Not available yet" : "Hindi pa available"}
+                title={en ? "Not available yet" : "Hindi pa magagamit"}
               >
                 <Camera className="h-4 w-4" />
               </button>
@@ -55,25 +55,25 @@ function ProfilePage() {
 
             <div>
               <p className="text-[18px] font-extrabold">
-                {driver?.name || (en ? "Driver" : "Driver")}
+                {driver?.name || (en ? "Driver" : "Tsuper")}
               </p>
               <p className="text-[11px] font-medium text-white/70">
-                {driver?.denomination || (en ? "PUV Driver" : "PUV Driver")}
+                {driver?.denomination || (en ? "PUV Driver" : "Tsuper ng PUV")}
               </p>
               {driver?.verification_status === "verified" && (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold text-emerald-400">
                   <CheckCircle2 className="h-3 w-3" />{" "}
-                  {en ? "Verified Driver" : "Verified na Driver"}
+                  {en ? "Verified Driver" : "Kumpirmadong Tsuper"}
                 </div>
               )}
               {driver?.verification_status === "unverified" && (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#f5a623]/30 bg-[#f5a623]/20 px-2.5 py-1 text-[10px] font-bold text-white">
-                  {en ? "Verification pending" : "Naghihintay ng Verification"}
+                  {en ? "Verification pending" : "Naghihintay ng Pagpapatunay"}
                 </div>
               )}
               {driver?.verification_status === "rejected" && (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/20 px-2.5 py-1 text-[10px] font-bold text-white">
-                  {en ? "Verification rejected" : "Tinanggihan ang Verification"}
+                  {en ? "Verification rejected" : "Tinanggihan ang Pagpapatunay"}
                 </div>
               )}
             </div>
@@ -83,7 +83,7 @@ function ProfilePage() {
             <div>
               <p className="text-[16px] font-extrabold">{active}</p>
               <p className="text-[9px] font-bold uppercase tracking-wider text-white/50">
-                {en ? "Applications" : "Aplikasyon"}
+                {en ? "Applications" : "Mga Aplikasyon"}
               </p>
             </div>
             <div>
@@ -106,7 +106,7 @@ function ProfilePage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-extrabold text-[#1b2b4b]">
-              {en ? "Edit my information" : "I-edit ang aking impormasyon"}
+              {en ? "Edit my information" : "Baguhin ang aking impormasyon"}
             </p>
           </div>
           <ChevronRight className="h-4 w-4 text-[#c1c1c1]" />
@@ -116,7 +116,7 @@ function ProfilePage() {
           onClick={doLogout}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-[24px] border-2 border-red-100 bg-red-50 py-4 text-[13px] font-extrabold text-red-600 transition-all hover:bg-red-100 active:scale-95"
         >
-          <LogOut className="h-4 w-4" /> {en ? "Log out" : "Sign Out"}
+          <LogOut className="h-4 w-4" /> {en ? "Log out" : "Lumabas"}
         </button>
       </div>
     </MobileShell>

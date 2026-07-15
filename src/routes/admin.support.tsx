@@ -1,120 +1,255 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Send, Plus, Search, AlertCircle, FileText } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Send, CheckCircle2, Flag } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { AdminBottomNav } from "@/components/mobile/AdminBottomNav";
 import { TopBar } from "@/components/mobile/TopBar";
-import { helpRequests } from "@/data/mock";
+import { supabase } from "@/supabase";
 
 export const Route = createFileRoute("/admin/support")({
   component: AdminSupport,
 });
 
-const grievances = [
-  { name: "Juan Santos", issue: "Incorrect subsidy amount", status: "PENDING", evidence: "receipt_01.pdf" },
-  { name: "Maria Cruz", issue: "System login error", status: "PENDING", evidence: "screenshot.png" },
-];
+function getThreadMessages(g: any) {
+  const opening = [
+    { id: `opening-${g.id}`, message: g.message, sent_by: "driver", created_at: g.created_at },
+  ];
+  const extra = (g.grievance_messages || [])
+    .slice()
+    .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  return [...opening, ...extra];
+}
 
 function AdminSupport() {
   const navigate = useNavigate();
-  const [view, setView] = useState<"chat" | "grievance">("chat");
-  const [activeChat, setActiveChat] = useState<string | null>(null);
-  const [msg, setMsg] = useState("");
-  const [search, setSearch] = useState("");
+  const [grievances, setGrievances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState("");
 
-  const filteredChats = helpRequests.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  }
+
+  async function load() {
+    const { data } = await supabase
+      .from("grievances")
+      .select(
+        "*, drivers(full_name, mobile), applications(payout_events(program_name, program_agency)), grievance_messages(id, message, sent_by, created_at)",
+      )
+      .eq("is_draft", false)
+      .order("created_at", { ascending: false });
+    setGrievances(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const open = openId ? grievances.find((g) => g.id === openId) : null;
+
+  async function sendReply() {
+    if (!open || !reply.trim()) return;
+    setSending(true);
+    await supabase
+      .from("grievance_messages")
+      .insert({ grievance_id: open.id, message: reply, sent_by: "admin" });
+    await supabase
+      .from("grievances")
+      .update({ driver_seen_reply: false, status: "replied" })
+      .eq("id", open.id);
+    setReply("");
+    setSending(false);
+    showToast("Reply sent.");
+    load();
+  }
+
+  async function markResolved() {
+    if (!open) return;
+    await supabase.from("grievances").update({ status: "resolved" }).eq("id", open.id);
+    showToast("Marked as resolved.");
+    load();
+  }
+
+  // ── Thread view ──
+  if (open) {
+    const thread = getThreadMessages(open);
+    const programName = open.applications?.payout_events?.program_name || "General Inquiry";
+    return (
+      <MobileShell>
+        {toast && (
+          <div className="fixed left-1/2 top-4 z-[400] -translate-x-1/2 rounded-full bg-[#1b2b4b] px-4 py-2 text-[13px] font-bold text-white shadow-lg">
+            {toast}
+          </div>
+        )}
+
+        <div className="sticky top-0 z-20 flex items-center gap-4 border-b border-gray-100 bg-white/90 px-6 pb-4 pt-8 backdrop-blur-xl">
+          <button
+            onClick={() => setOpenId(null)}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
+          >
+            <ArrowLeft className="h-5 w-5 text-[#1b2b4b]" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-bold text-[#1b2b4b]">
+              {open.drivers?.full_name} · {open.drivers?.mobile}
+            </h1>
+            <p className="truncate text-[12px] text-[#8c8b88]">
+              📋 {programName} · {open.concern_type}
+            </p>
+          </div>
+          {open.status !== "resolved" ? (
+            <button
+              onClick={markResolved}
+              className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" /> Resolve
+            </button>
+          ) : (
+            <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700">
+              Resolved
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 px-6 py-4">
+          {thread.map((m: any) => {
+            const isDriver = m.sent_by === "driver";
+            return (
+              <div
+                key={m.id}
+                className={`flex max-w-[85%] flex-col ${isDriver ? "self-start items-start" : "self-end items-end"}`}
+              >
+                <div
+                  className={`px-4 py-2.5 text-[13px] leading-relaxed ${isDriver ? "rounded-[14px_14px_14px_4px] border border-gray-100 bg-gray-50 text-[#1b2b4b]" : "rounded-[14px_14px_4px_14px] bg-[#1b2b4b] text-white"}`}
+                >
+                  {m.message}
+                </div>
+                <p className="mt-1 text-[10px] text-[#8c8b88]">
+                  {isDriver ? "Driver" : "You (Admin)"} ·{" "}
+                  {new Date(m.created_at).toLocaleString("en-PH", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            );
+          })}
+          {thread.length > 0 && thread[thread.length - 1].sent_by === "driver" && (
+            <p className="text-[12px] italic text-[#8c8b88]">⏳ Awaiting your response...</p>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 flex items-end gap-2 border-t border-gray-100 bg-white p-4">
+          <textarea
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            placeholder="Type your reply..."
+            className="min-h-[44px] flex-1 rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+          />
+          <button
+            onClick={sendReply}
+            disabled={sending || !reply.trim()}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1b2b4b] text-white disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+      </MobileShell>
+    );
+  }
+
+  // ── List view, grouped by program ──
+  const grouped: Record<string, any[]> = {};
+  const general: any[] = [];
+  grievances.forEach((g) => {
+    const name = g.applications?.payout_events?.program_name;
+    if (name) {
+      if (!grouped[name]) grouped[name] = [];
+      grouped[name].push(g);
+    } else {
+      general.push(g);
+    }
+  });
+
+  const renderRow = (g: any) => {
+    const lastAdmin = (g.grievance_messages || []).some((m: any) => m.sent_by === "admin");
+    return (
+      <button
+        key={g.id}
+        onClick={() => setOpenId(g.id)}
+        className="flex w-full items-start justify-between gap-3 rounded-[20px] border border-gray-100 bg-white p-4 text-left shadow-sm transition-all hover:border-[#f5a623]/30 hover:shadow-md"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-extrabold text-[#1b2b4b]">
+            {g.drivers?.full_name} · {g.drivers?.mobile}
+          </p>
+          <p className="text-[11px] font-medium text-gray-500">{g.concern_type}</p>
+          <p className="mt-1 truncate text-[12px] text-[#1b2b4b]">{g.message}</p>
+          <p className="mt-1 text-[10px] text-gray-400">
+            {new Date(g.created_at).toLocaleString()}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {lastAdmin && <span className="text-[10px] font-bold text-emerald-600">✓ Replied</span>}
+          {g.status === "resolved" && (
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+              Resolved
+            </span>
+          )}
+          {g.is_grievance && (
+            <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold text-red-600">
+              <Flag className="h-2.5 w-2.5" /> Grievance
+            </span>
+          )}
+        </div>
+      </button>
+    );
+  };
 
   return (
     <MobileShell bottomNav={<AdminBottomNav />}>
-      <TopBar title="Support & Grievances" />
-      
-      <div className="px-6 pt-4 pb-24 space-y-6">
-        <div className="flex bg-gray-100 p-1.5 rounded-full border border-gray-200">
-          <button 
-            onClick={() => setView("chat")}
-            className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-full transition-all ${view === "chat" ? "bg-white text-[#1b2b4b] shadow-sm" : "text-gray-500"}`}
-          >
-            Chat
-          </button>
-          <button 
-            onClick={() => setView("grievance")}
-            className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-full transition-all ${view === "grievance" ? "bg-white text-[#1b2b4b] shadow-sm" : "text-gray-500"}`}
-          >
-            Grievances
-          </button>
-        </div>
+      <TopBar
+        title="Help Requests"
+        subtitle={`${grievances.length} total`}
+        onBack={() => navigate({ to: "/admin" })}
+      />
 
-        {view === "chat" ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm focus-within:border-[#f5a623]">
-              <Search className="h-4 w-4 text-gray-400" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats..." className="flex-1 bg-transparent text-sm font-bold text-[#1b2b4b] outline-none" />
-            </div>
-
-            {filteredChats.map((r) => (
-              <button
-                key={r.name}
-                onClick={() => setActiveChat(r.name)}
-                className={`flex w-full items-center gap-4 rounded-[24px] p-4 border transition-all ${activeChat === r.name ? "bg-white border-[#f5a623] shadow-md" : "bg-white border-gray-100 shadow-sm hover:border-gray-200"}`}
-              >
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#1b2b4b] text-sm font-black text-white">{r.name.split(" ").map(n => n[0]).join("")}</div>
-                <div className="min-w-0 flex-1 text-left">
-                  <p className="text-sm font-extrabold text-[#1b2b4b] truncate">{r.name}</p>
-                  <p className="text-[11px] font-medium text-gray-500 truncate">{r.subject}</p>
-                </div>
-              </button>
-            ))}
-            
-            {activeChat && (
-              <div className="rounded-[32px] bg-white p-5 border border-gray-100 shadow-sm mt-4">
-                <div className="space-y-4 mb-6">
-                  <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-50 p-4 text-[13px] font-medium text-[#1b2b4b]">How can I help you today?</div>
-                  <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-[#1b2b4b] p-4 text-[13px] font-medium text-white">We're looking into this for you.</div>
-                </div>
-                <div className="flex items-center gap-2 rounded-2xl bg-gray-50 p-2 border border-gray-100">
-                  <input value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Type a reply…" className="flex-1 bg-transparent px-3 text-sm font-bold text-[#1b2b4b] outline-none" />
-                  <button onClick={() => setMsg("")} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#f5a623] text-[#1b2b4b] shadow-md active:scale-95"><Send className="h-4 w-4" /></button>
-                </div>
-              </div>
-            )}
+      <div className="space-y-6 px-5 pb-24 pt-4">
+        {loading ? (
+          <div className="rounded-2xl border-2 border-dashed border-gray-100 p-10 text-center text-[#8c8b88]">
+            Loading...
+          </div>
+        ) : grievances.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-gray-100 p-10 text-center text-[#8c8b88]">
+            No help requests yet.
           </div>
         ) : (
-          <div className="space-y-4">
-            {grievances.map((g) => (
-              <div key={g.name} className="rounded-[24px] bg-white p-5 border border-gray-100 shadow-sm transition-all hover:shadow-md hover:border-[#f5a623]/20">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-red-50 text-red-600"><AlertCircle className="h-5 w-5" /></div>
-                    <div>
-                      <p className="text-sm font-extrabold text-[#1b2b4b]">{g.name}</p>
-                      <p className="text-[10px] font-bold text-gray-400">{g.status}</p>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-sm font-bold text-[#1b2b4b] mb-3">{g.issue}</p>
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl text-[11px] font-bold text-[#1b2b4b] border border-gray-100">
-                        <FileText className="h-4 w-4" /> {g.evidence}
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                      onClick={() => navigate({ to: "/admin-reject" })}
-                      className="flex-1 bg-white border border-gray-200 py-2.5 rounded-xl text-[11px] font-bold text-red-600 hover:bg-red-50 active:scale-95"
-                    >
-                      Reject
-                    </button>
-                    <button className="flex-1 bg-[#1b2b4b] text-white py-2.5 rounded-xl text-[11px] font-bold active:scale-95">Resolve</button>
-                </div>
+          <>
+            {Object.entries(grouped).map(([name, items]) => (
+              <div key={name}>
+                <p className="mb-2 px-1 text-[13px] font-bold text-[#1b2b4b]">📋 {name}</p>
+                <div className="space-y-3">{items.map(renderRow)}</div>
               </div>
             ))}
-          </div>
+            {general.length > 0 && (
+              <div>
+                <p className="mb-2 px-1 text-[13px] font-bold text-[#1b2b4b]">General Inquiries</p>
+                <div className="space-y-3">{general.map(renderRow)}</div>
+              </div>
+            )}
+          </>
         )}
       </div>
-
-      <button className="fixed bottom-24 right-6 grid h-14 w-14 place-items-center rounded-3xl bg-[#1b2b4b] text-white shadow-xl transition-all hover:scale-105 active:scale-95">
-        <Plus className="h-6 w-6" />
-      </button>
     </MobileShell>
   );
 }

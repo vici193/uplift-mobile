@@ -23,6 +23,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
   if (driver) {
     if (driver.verification_status === "verified") {
       notifs.push({
+        sortDate: now,
         type: "approved",
         time: en ? "Verification" : "Verification",
         msg: en
@@ -39,6 +40,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
       });
     } else if (driver.verification_status === "rejected") {
       notifs.push({
+        sortDate: now,
         type: "rejected",
         time: en ? "Verification" : "Verification",
         msg: en
@@ -57,6 +59,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
       });
     } else {
       notifs.push({
+        sortDate: now,
         type: "info",
         time: en ? "Verification" : "Verification",
         msg: en
@@ -80,6 +83,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
         minute: "2-digit",
       });
       notifs.unshift({
+        sortDate: new Date(ev.created_at || now),
         type: "info",
         time: en ? "New" : "Bago",
         msg: en
@@ -105,6 +109,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
       const hoursLeft = (new Date(deadline).getTime() - now.getTime()) / (1000 * 60 * 60);
       if (hoursLeft > 0 && hoursLeft <= 48) {
         notifs.unshift({
+          sortDate: now,
           type: "rejected",
           time: hoursLeft <= 24 ? (en ? "Today" : "Ngayon") : en ? "Tomorrow" : "Bukas",
           msg: `⚠️ ${en ? "Deadline for" : "Deadline ng"} ${a.payout_events?.program_name}: ${new Date(deadline).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`,
@@ -114,6 +119,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
     }
     if (a.status === "approved") {
       notifs.push({
+        sortDate: new Date(a.updated_at || a.applied_at),
         type: "approved",
         time: en ? "Recent" : "Kamakailan",
         msg: en
@@ -132,6 +138,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
       });
     } else if (a.status === "pending") {
       notifs.push({
+        sortDate: new Date(a.applied_at),
         type: "info",
         time: en ? "Recent" : "Kamakailan",
         msg: en
@@ -141,6 +148,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
       });
     } else if (a.status === "rejected" && a.rejection_fields) {
       notifs.push({
+        sortDate: new Date(a.updated_at || a.applied_at),
         type: "rejected",
         time: en ? "Recent" : "Kamakailan",
         msg: en
@@ -164,6 +172,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
 
   if (appointment) {
     notifs.push({
+      sortDate: new Date(appointment.created_at || now),
       type: "appointment",
       time: en ? "Recent" : "Kamakailan",
       msg: en
@@ -182,6 +191,7 @@ function buildNotifs(en: boolean, apps: any[], appointment: any, driver: any, op
     });
   }
 
+  notifs.sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
   return notifs;
 }
 
@@ -264,41 +274,46 @@ function UpdatesPage() {
         )}
       </div>
 
+      {/* NEW UPDATED MODAL STRUCTURE */}
       {activeModal && (
         <div
-          className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
+          // Use absolute inset-0 to cover the full height of the scroll container
+          className="absolute inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
           onClick={() => setActiveModal(null)}
         >
-          <div
-            className="w-full max-w-xs rounded-[32px] bg-white p-6 text-center shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto text-4xl">{activeModal.icon}</div>
-            <h3 className="mt-3 text-lg font-black text-[#1b2b4b]">{activeModal.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-[#8c8b88]">{activeModal.body}</p>
-            <div className="mt-6 flex flex-col gap-2">
-              {activeModal.action && (
+          {/* Use sticky top-0 with 100dvh height to perfectly center the modal box in the user's view, regardless of scroll position */}
+          <div className="pointer-events-none sticky top-0 flex h-[100dvh] w-full items-center justify-center p-6">
+            <div
+              className="pointer-events-auto max-h-[85vh] w-full max-w-xs overflow-y-auto rounded-[32px] bg-white p-6 text-center shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mx-auto text-4xl">{activeModal.icon}</div>
+              <h3 className="mt-3 text-lg font-black text-[#1b2b4b]">{activeModal.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#8c8b88]">{activeModal.body}</p>
+              <div className="mt-6 flex flex-col gap-2">
+                {activeModal.action && (
+                  <button
+                    onClick={() => handleAction(activeModal.action)}
+                    className="rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b]"
+                  >
+                    {activeModal.actionLabel}
+                  </button>
+                )}
+                {activeModal.action2 && (
+                  <button
+                    onClick={() => handleAction(activeModal.action2)}
+                    className="rounded-full border border-[#1b2b4b]/20 py-3 text-sm font-bold text-[#1b2b4b]"
+                  >
+                    {activeModal.action2Label}
+                  </button>
+                )}
                 <button
-                  onClick={() => handleAction(activeModal.action)}
-                  className="rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b]"
-                >
-                  {activeModal.actionLabel}
-                </button>
-              )}
-              {activeModal.action2 && (
-                <button
-                  onClick={() => handleAction(activeModal.action2)}
+                  onClick={() => setActiveModal(null)}
                   className="rounded-full border border-[#1b2b4b]/20 py-3 text-sm font-bold text-[#1b2b4b]"
                 >
-                  {activeModal.action2Label}
+                  {activeModal.closeLabel || (en ? "Close" : "Isara")}
                 </button>
-              )}
-              <button
-                onClick={() => setActiveModal(null)}
-                className="rounded-full border border-[#1b2b4b]/20 py-3 text-sm font-bold text-[#1b2b4b]"
-              >
-                {activeModal.closeLabel || (en ? "Close" : "Isara")}
-              </button>
+              </div>
             </div>
           </div>
         </div>

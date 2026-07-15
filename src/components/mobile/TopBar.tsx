@@ -4,12 +4,12 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function TopBar({
-  title,
-  subtitle,
-  right,
-  variant = "light",
-  onBack,
-}: {
+                         title,
+                         subtitle,
+                         right,
+                         variant = "light",
+                         onBack,
+                       }: {
   title?: string;
   subtitle?: string;
   right?: ReactNode;
@@ -17,14 +17,20 @@ export function TopBar({
   onBack?: () => void;
 }) {
   const router = useRouter();
+
   const handleBack = () => {
-    if (onBack) return onBack();
+    if (onBack) {
+      onBack();
+      return;
+    }
+    // Using window.history.back() natively pops the browser history stack reliably
     if (typeof window !== "undefined" && window.history.length > 1) {
-      router.history.back();
+      window.history.back();
     } else {
       router.navigate({ to: "/home" });
     }
   };
+
   return (
     <div
       className={cn(

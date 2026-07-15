@@ -206,6 +206,7 @@ function useSessionState() {
         denomination: profile.denomination,
         case_number: profile.case_number,
         operator_name: profile.operator_name,
+        cooperative_name: profile.cooperative_name,
         plate_number: profile.plate_number,
         chassis_number: profile.chassis_number,
         license_number: profile.license_number,

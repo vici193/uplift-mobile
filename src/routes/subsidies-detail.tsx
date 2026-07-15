@@ -11,6 +11,8 @@ import {
   HelpCircle,
   MapPin,
   Calendar,
+  RefreshCw,
+  Pencil,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { MobileShell } from "@/components/mobile/MobileShell";
@@ -67,15 +69,21 @@ function SubsidyDetailPage() {
   const latestMsg =
     app.application_messages?.length > 0
       ? [...app.application_messages].sort(
-          (x: any, y: any) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
-        )[0]
+        (x: any, y: any) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
+      )[0]
       : null;
 
   return (
     <MobileShell>
       <div className="sticky top-0 z-20 flex items-center gap-4 border-b border-gray-100 bg-white/90 px-6 pb-4 pt-8 backdrop-blur-xl">
         <button
-          onClick={() => navigate({ to: "/subsidies" })}
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              window.history.back();
+            } else {
+              navigate({ to: "/subsidies" });
+            }
+          }}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-200"
         >
           <ArrowLeft className="h-5 w-5 text-[#1b2b4b]" />
@@ -96,6 +104,52 @@ function SubsidyDetailPage() {
         <p className="mt-1 text-sm font-bold text-[#f5a623]">
           {app.payout_events?.program_agency || ""}
         </p>
+
+        {/* Rejected: show reason, and offer reapply if the rejection was for fixable fields
+            (not blocked by an admin's "do not allow reapply" decision) and the deadline hasn't passed */}
+        {app.status === "rejected" && (
+          <>
+            <div className="mt-8 w-full rounded-2xl border border-red-200 bg-red-50 p-4 text-left text-sm leading-relaxed text-[#1b2b4b]">
+              <p className="mb-2 font-bold text-red-600">
+                ❌ {en ? "Application Rejected" : "Tinanggihan ang Aplikasyon"}
+              </p>
+              {app.rejection_fields
+                ? en
+                  ? `Please correct: ${app.rejection_fields}`
+                  : `Pakitama: ${app.rejection_fields}`
+                : en
+                  ? "See the message below for details."
+                  : "Tingnan ang mensahe sa ibaba."}
+            </div>
+
+            {(() => {
+              const deadline = app.payout_events?.application_deadline;
+              const deadlinePassed = deadline ? new Date(deadline) < new Date() : false;
+              const canReapply = !!app.rejection_has_fields && !deadlinePassed;
+              if (!canReapply) return null;
+              return (
+                <div className="mt-3 flex w-full flex-col gap-2">
+                  <button
+                    onClick={() => navigate({ to: "/edit" })}
+                    className="flex items-center justify-center gap-2 rounded-full border-2 border-[#1b2b4b] py-3.5 text-sm font-bold text-[#1b2b4b]"
+                  >
+                    <Pencil className="h-4 w-4" />{" "}
+                    {en ? "Fix Details in Profile" : "Ayusin ang Detalye sa Profile"}
+                  </button>
+                  <button
+                    onClick={() =>
+                      navigate({ to: "/apply-detail", search: { eventId: app.event_id } })
+                    }
+                    className="flex items-center justify-center gap-2 rounded-full bg-[#f5a623] py-3.5 text-sm font-bold text-[#1b2b4b] shadow-lg"
+                  >
+                    <RefreshCw className="h-4 w-4" />{" "}
+                    {en ? "Reapply for this Subsidy" : "Mag-reapply para sa Subsidy na ito"}
+                  </button>
+                </div>
+              );
+            })()}
+          </>
+        )}
 
         {/* Real appointment/QR — only shows once approved AND an appointment exists */}
         {app.status === "approved" && appt && (
@@ -192,6 +246,7 @@ function SubsidyDetailPage() {
 
         <Link
           to="/help"
+          search={{ appId: app.id }}
           className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#1b2b4b] p-4 font-bold text-white transition-colors hover:bg-[#253960]"
         >
           <HelpCircle size={20} />

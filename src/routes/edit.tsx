@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Save, ArrowLeft, HelpCircle } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { useSession } from "@/lib/session-context";
 import { supabase } from "@/supabase";
 import { PH_REGIONS, PH_PROVINCES_BY_REGION, PH_CITIES_BY_PROVINCE } from "@/shared";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/edit")({
   component: EditProfilePage,
@@ -38,17 +39,33 @@ const denominations = [
   "Taxi",
 ];
 
-const tutSteps = (en: boolean) => [
-  en
-    ? "Ensure your Personal Information matches your Driver's License exactly."
-    : "Siguraduhing eksaktong tugma ang Personal na Impormasyon sa iyong Driver's License.",
-  en ? "Keep your Address up to date." : "Panatilihing updated ang iyong Tirahan.",
-  en
-    ? "Verify your Vehicle and Franchise details."
-    : "I-verify ang detalye ng Sasakyan at Pransisa.",
-  en
-    ? "Double-check your E-wallet details, then click Save Changes."
-    : "I-double-check ang detalye ng E-wallet, pagkatapos ay i-click ang I-save.",
+const getTutSteps = (en: boolean) => [
+  {
+    title: en ? "Personal Details" : "Personal na Impormasyon",
+    desc: en
+      ? "Ensure your Personal Information matches your Driver's License exactly."
+      : "Siguraduhing eksaktong tugma ang Personal na Impormasyon sa iyong Driver's License.",
+    target: "tut-personal",
+  },
+  {
+    title: en ? "Address" : "Tirahan",
+    desc: en ? "Keep your Address up to date." : "Panatilihing updated ang iyong Tirahan.",
+    target: "tut-address",
+  },
+  {
+    title: en ? "Vehicle & Franchise" : "Sasakyan at Pransisa",
+    desc: en
+      ? "Verify your Vehicle and Franchise details."
+      : "I-verify ang detalye ng Sasakyan at Pransisa.",
+    target: "tut-vehicle",
+  },
+  {
+    title: en ? "Save Changes" : "I-save",
+    desc: en
+      ? "Review everything once more, then click Save Changes."
+      : "Suriin muli ang lahat, pagkatapos ay i-click ang I-save.",
+    target: "tut-save",
+  },
 ];
 
 const inputCls =
@@ -59,7 +76,7 @@ function EditProfilePage() {
   const navigate = useNavigate();
   const { en, driver, driverId, loadDriverData } = useSession();
   const [tutStep, setTutStep] = useState(0);
-  const steps = tutSteps(en);
+  const steps = getTutSteps(en);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -80,16 +97,72 @@ function EditProfilePage() {
     denomination: driver?.denomination || "",
     case_number: driver?.case_number || "",
     operator_name: driver?.operator_name || "",
+    cooperative_name: driver?.cooperative_name || "",
     plate_number: driver?.plate_number || "",
     chassis_number: driver?.chassis_number || "",
     license_number: driver?.license_number || "",
-    ewallet_type: driver?.ewallet_type || "",
-    ewallet_number: driver?.ewallet_number || "",
   });
 
   function set(field: string, val: string) {
     setForm((p) => ({ ...p, [field]: val }));
   }
+
+  // Smooth scroll to the currently highlighted target element
+  useEffect(() => {
+    if (tutStep > 0) {
+      const target = steps[tutStep - 1]?.target;
+      const el = document.getElementById(target);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        window.scrollTo({
+          top: window.scrollY + rect.top - window.innerHeight * 0.18,
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [tutStep, en]);
+
+  const isHighlighted = (target: string) => tutStep > 0 && steps[tutStep - 1]?.target === target;
+
+  const renderTutorialCard = (targetId: string, positionClasses: string) => {
+    if (tutStep === 0 || steps[tutStep - 1]?.target !== targetId) return null;
+    const stepData = steps[tutStep - 1];
+
+    return (
+      <div
+        className={`absolute z-[300] rounded-3xl border-2 border-[#f5a623] bg-[#1b2b4b] p-6 shadow-2xl ${positionClasses}`}
+      >
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-[#1b2b4b]">
+            {tutStep}/{steps.length}
+          </div>
+          <h3 className="text-lg font-bold text-white">{stepData.title}</h3>
+        </div>
+        <p className="mb-6 text-sm text-white/80">{stepData.desc}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              setTutStep(0);
+            }}
+            className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+          >
+            {en ? "Skip" : "Laktawan"}
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              if (tutStep < steps.length) setTutStep((s) => s + 1);
+              else setTutStep(0);
+            }}
+            className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
+          >
+            {tutStep === steps.length ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   async function handleSave() {
     setLoading(true);
@@ -122,11 +195,10 @@ function EditProfilePage() {
         denomination: form.denomination,
         case_number: form.case_number,
         operator_name: form.operator_name,
+        cooperative_name: form.cooperative_name,
         plate_number: form.plate_number,
         chassis_number: form.chassis_number,
         license_number: form.license_number,
-        ewallet_type: form.ewallet_type,
-        ewallet_number: form.ewallet_number,
         ...(wasRejected ? { verification_status: "unverified", verification_notes: null } : {}),
       })
       .eq("id", driverId);
@@ -156,35 +228,7 @@ function EditProfilePage() {
         </button>
       </div>
 
-      {tutStep > 0 && (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/60 p-6 backdrop-blur-[2px]">
-          <div className="w-full max-w-xs rounded-3xl border-2 border-[#f5a623] bg-[#1b2b4b] p-6 shadow-2xl">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-[#1b2b4b]">
-                {tutStep}/{steps.length}
-              </div>
-              <h3 className="text-lg font-bold text-white">
-                {en ? "Profile Guide" : "Gabay sa Profile"}
-              </h3>
-            </div>
-            <p className="mb-6 text-sm text-white/80">{steps[tutStep - 1]}</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setTutStep(0)}
-                className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white"
-              >
-                {en ? "Skip" : "Laktawan"}
-              </button>
-              <button
-                onClick={() => (tutStep < steps.length ? setTutStep((s) => s + 1) : setTutStep(0))}
-                className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b]"
-              >
-                {tutStep === steps.length ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {tutStep > 0 && <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]" />}
 
       <div className="space-y-8 px-6 pb-8 pt-4">
         {error && (
@@ -194,10 +238,16 @@ function EditProfilePage() {
         )}
 
         <section
-          className={`space-y-4 ${tutStep === 1 ? "relative z-[250] rounded-3xl bg-[#1b2b4b] p-4 ring-4 ring-[#f5a623]" : ""}`}
+          id="tut-personal"
+          className={cn(
+            "space-y-4 pt-4 relative transition-all",
+            isHighlighted("tut-personal")
+              ? "z-[250] rounded-3xl bg-[#1b2b4b] p-4 ring-4 ring-[#f5a623]"
+              : "",
+          )}
         >
           <h3
-            className={`ml-1 text-[11px] font-extrabold uppercase tracking-wider ${tutStep === 1 ? "text-white" : "text-[#8c8b88]"}`}
+            className={`ml-1 text-[11px] font-extrabold uppercase tracking-wider ${isHighlighted("tut-personal") ? "text-white" : "text-[#8c8b88]"}`}
           >
             {en ? "Personal Details" : "Personal na Impormasyon"}
           </h3>
@@ -216,7 +266,9 @@ function EditProfilePage() {
               onChange={(e) => set("middle_name", e.target.value)}
             />
           </div>
-          <label className="ml-1 flex items-center gap-2 text-xs text-[#8c8b88]">
+          <label
+            className={`ml-1 flex items-center gap-2 text-xs ${isHighlighted("tut-personal") ? "text-white/80" : "text-[#8c8b88]"}`}
+          >
             <input
               type="checkbox"
               checked={noMiddle}
@@ -275,13 +327,23 @@ function EditProfilePage() {
             maxLength={4}
             onChange={(e) => set("birth_year", e.target.value)}
           />
+          {renderTutorialCard(
+            "tut-personal",
+            "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+          )}
         </section>
 
         <section
-          className={`space-y-4 border-t border-gray-100 pt-4 ${tutStep === 2 ? "relative z-[250] rounded-3xl border-none bg-[#1b2b4b] p-4 ring-4 ring-[#f5a623]" : ""}`}
+          id="tut-address"
+          className={cn(
+            "space-y-4 border-t border-gray-100 pt-4 relative transition-all",
+            isHighlighted("tut-address")
+              ? "z-[250] border-none rounded-3xl bg-[#1b2b4b] p-4 ring-4 ring-[#f5a623]"
+              : "",
+          )}
         >
           <h3
-            className={`ml-1 text-[11px] font-extrabold uppercase tracking-wider ${tutStep === 2 ? "text-white" : "text-[#8c8b88]"}`}
+            className={`ml-1 text-[11px] font-extrabold uppercase tracking-wider ${isHighlighted("tut-address") ? "text-white" : "text-[#8c8b88]"}`}
           >
             {en ? "Address" : "Tirahan"}
           </h3>
@@ -334,13 +396,23 @@ function EditProfilePage() {
             value={form.barangay}
             onChange={(e) => set("barangay", e.target.value)}
           />
+          {renderTutorialCard(
+            "tut-address",
+            "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+          )}
         </section>
 
         <section
-          className={`space-y-4 border-t border-gray-100 pt-4 ${tutStep === 3 ? "relative z-[250] rounded-3xl border-none bg-[#1b2b4b] p-4 ring-4 ring-[#f5a623]" : ""}`}
+          id="tut-vehicle"
+          className={cn(
+            "space-y-4 border-t border-gray-100 pt-4 relative transition-all",
+            isHighlighted("tut-vehicle")
+              ? "z-[250] border-none rounded-3xl bg-[#1b2b4b] p-4 ring-4 ring-[#f5a623]"
+              : "",
+          )}
         >
           <h3
-            className={`ml-1 text-[11px] font-extrabold uppercase tracking-wider ${tutStep === 3 ? "text-white" : "text-[#8c8b88]"}`}
+            className={`ml-1 text-[11px] font-extrabold uppercase tracking-wider ${isHighlighted("tut-vehicle") ? "text-white" : "text-[#8c8b88]"}`}
           >
             {en ? "Vehicle and Franchise" : "Sasakyan at Pransisa"}
           </h3>
@@ -366,6 +438,12 @@ function EditProfilePage() {
             value={form.operator_name}
             onChange={(e) => set("operator_name", e.target.value)}
           />
+          <input
+            className={inputCls}
+            placeholder={en ? "Cooperative Name" : "Pangalan ng Kooperatiba"}
+            value={form.cooperative_name}
+            onChange={(e) => set("cooperative_name", e.target.value)}
+          />
           <div className="grid grid-cols-2 gap-4">
             <input
               className={inputCls}
@@ -386,40 +464,33 @@ function EditProfilePage() {
             value={form.license_number}
             onChange={(e) => set("license_number", e.target.value)}
           />
+          {renderTutorialCard(
+            "tut-vehicle",
+            "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+          )}
         </section>
 
-        <section
-          className={`space-y-4 border-t border-gray-100 pt-4 ${tutStep === 4 ? "relative z-[250] rounded-3xl border-none bg-[#1b2b4b] p-4 ring-4 ring-[#f5a623]" : ""}`}
+        <div
+          id="tut-save"
+          className={cn(
+            "relative mt-8 transition-all",
+            isHighlighted("tut-save")
+              ? "z-[250] rounded-2xl bg-white shadow-2xl ring-4 ring-[#f5a623]"
+              : "",
+          )}
         >
-          <h3
-            className={`ml-1 text-[11px] font-extrabold uppercase tracking-wider ${tutStep === 4 ? "text-white" : "text-[#8c8b88]"}`}
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#1b2b4b] py-4 font-bold text-white shadow-lg transition-all hover:bg-[#2a3f68] active:scale-95 disabled:opacity-60"
           >
-            E-wallet
-          </h3>
-          <select
-            className={selectCls}
-            value={form.ewallet_type}
-            onChange={(e) => set("ewallet_type", e.target.value)}
-          >
-            <option value="">{en ? "Type..." : "Uri..."}</option>
-            <option>GCash</option>
-            <option>PayMaya</option>
-          </select>
-          <input
-            className={inputCls}
-            placeholder={en ? "Number" : "Numero"}
-            value={form.ewallet_number}
-            onChange={(e) => set("ewallet_number", e.target.value)}
-          />
-        </section>
-
-        <button
-          onClick={() => void handleSave()}
-          disabled={loading}
-          className={`mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#1b2b4b] py-4 font-bold text-white shadow-lg transition-all hover:bg-[#2a3f68] active:scale-95 disabled:opacity-60 ${tutStep === 4 ? "relative z-[250] ring-4 ring-[#f5a623]" : ""}`}
-        >
-          <Save size={18} /> {loading ? "..." : en ? "Save Changes" : "I-save ang mga Pagbabago"}
-        </button>
+            <Save size={18} /> {loading ? "..." : en ? "Save Changes" : "I-save ang mga Pagbabago"}
+          </button>
+          {renderTutorialCard(
+            "tut-save",
+            "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+          )}
+        </div>
       </div>
     </MobileShell>
   );
