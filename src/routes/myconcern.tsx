@@ -56,13 +56,13 @@ function getThreadMessages(c: any) {
     c.is_draft || c.status === "draft"
       ? []
       : [
-        {
-          id: `opening-${c.id}`,
-          message: c.message,
-          sent_by: "driver",
-          created_at: c.created_at,
-        },
-      ];
+          {
+            id: `opening-${c.id}`,
+            message: c.message,
+            sent_by: "driver",
+            created_at: c.created_at,
+          },
+        ];
   const extra = (c.grievance_messages || [])
     .slice()
     .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -280,14 +280,17 @@ function MyConcernsPage() {
             id={Object.keys(grouped).length === 0 ? "tut-concern-list" : undefined}
             className={cn(
               "rounded-2xl border-2 border-dashed border-[#e6e8eb] p-10 text-center text-[#8c8b88] transition-all",
-              isHighlighted("tut-concern-list") ? "relative z-[250] bg-white shadow-2xl ring-4 ring-[#f5a623]" : ""
+              isHighlighted("tut-concern-list")
+                ? "relative z-[250] bg-white shadow-2xl ring-4 ring-[#f5a623]"
+                : "",
             )}
           >
             {en ? "No concerns filed yet." : "Wala pang naisumiteng alalahanin."}
-            {Object.keys(grouped).length === 0 && renderTutorialCard(
-              "tut-concern-list",
-              "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]"
-            )}
+            {Object.keys(grouped).length === 0 &&
+              renderTutorialCard(
+                "tut-concern-list",
+                "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+              )}
           </div>
         )}
 
@@ -308,7 +311,7 @@ function MyConcernsPage() {
                         "transition-all",
                         isFirstTarget && isHighlighted("tut-concern-list")
                           ? "relative z-[250] rounded-2xl bg-white p-1 shadow-2xl ring-4 ring-[#f5a623]"
-                          : ""
+                          : "",
                       )}
                     >
                       <button
@@ -330,10 +333,11 @@ function MyConcernsPage() {
                           <ChevronRight className="h-4 w-4 text-[#c1c1c1]" />
                         </div>
                       </button>
-                      {isFirstTarget && renderTutorialCard(
-                        "tut-concern-list",
-                        "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
-                      )}
+                      {isFirstTarget &&
+                        renderTutorialCard(
+                          "tut-concern-list",
+                          "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+                        )}
                     </div>
                   );
                 })}
