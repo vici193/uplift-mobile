@@ -151,12 +151,9 @@ function AdminHome() {
               </div>
             ))}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-center text-[11px] font-bold text-[#8c8b88]">
+          <div className="mt-3 grid grid-cols-1 gap-3 text-center text-[11px] font-bold text-[#8c8b88]">
             <div className="rounded-2xl border border-gray-100 bg-white p-3">
               {kpi.drivers} <span className="font-medium">total drivers</span>
-            </div>
-            <div className="rounded-2xl border border-gray-100 bg-white p-3">
-              {kpi.approved} <span className="font-medium">approved this cycle</span>
             </div>
           </div>
         </section>

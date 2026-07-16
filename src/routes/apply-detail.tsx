@@ -25,7 +25,8 @@ export const Route = createFileRoute("/apply-detail")({
   component: ApplyDetailPage,
   validateSearch: searchSchema,
 });
-
+// Temporarily hidden — set back to true to re-enable the Disbursement section.
+const SHOW_DISBURSEMENT = false;
 const months = [
   "January",
   "February",
@@ -63,9 +64,6 @@ const tutSteps = (en: boolean) => [
   en
     ? "Your Vehicle and Franchise details must match your official documents exactly — mismatches are one of the most common reasons for rejection."
     : "Dapat eksaktong tugma ang iyong Sasakyan at Pransisa sa opisyal na dokumento — isa ito sa pinakakaraniwang dahilan ng pagkatanggi.",
-  en
-    ? "Choose how you'd like to receive this subsidy — cash at the venue, or straight to your GCash. If you pick GCash, make sure the account is registered in your own name."
-    : "Piliin kung paano mo nais matanggap ang subsidy na ito — cash sa venue, o diretso sa iyong GCash. Kung GCash ang piliin, siguraduhing nakalaan ito sa sarili mong pangalan.",
 ];
 
 function ApplyDetailPage() {
@@ -178,9 +176,11 @@ function ApplyDetailPage() {
     else if (!/^[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{6}$/.test(form.license_number.trim()))
       errs.license_number = "C01-XX-XXXXXX";
 
-    req("ewallet_type");
-    if (form.ewallet_type === "GCash") {
-      req("ewallet_number");
+    if (SHOW_DISBURSEMENT) {
+      req("ewallet_type");
+      if (form.ewallet_type === "GCash") {
+        req("ewallet_number");
+      }
     }
 
     return errs;
@@ -320,12 +320,12 @@ function ApplyDetailPage() {
           <button
             onClick={(e) => {
               e.preventDefault();
-              if (tutStep < 4) setTutStep((s) => s + 1);
+              if (tutStep < steps.length) setTutStep((s) => s + 1);
               else setTutStep(0);
             }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >
-            {tutStep === 4 ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
+            {tutStep === steps.length ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
           </button>
         </div>
       </div>
@@ -915,73 +915,75 @@ function ApplyDetailPage() {
             )}
           </div>
 
-          <div
-            id="tut-step-4"
-            className={`flex flex-col gap-3 rounded-2xl transition-all ${tutStep === 4 ? "relative z-[250] bg-white p-3 shadow-2xl ring-4 ring-[#f5a623]" : ""}`}
-          >
-            <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
-              {en ? "Disbursement" : "Pagpapalabas ng Pondo"}
-            </p>
+          {SHOW_DISBURSEMENT && (
             <div
-              ref={(el) => {
-                fieldRefs.current.ewallet_type = el;
-              }}
+              id="tut-step-4"
+              className={`flex flex-col gap-3 rounded-2xl transition-all ${tutStep === 4 ? "relative z-[250] bg-white p-3 shadow-2xl ring-4 ring-[#f5a623]" : ""}`}
             >
-              <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
-                {en
-                  ? "How would you like to receive this subsidy? *"
-                  : "Paano mo nais matanggap ang subsidy na ito? *"}
-              </label>
-              <select
-                className={inputCls("ewallet_type")}
-                value={form.ewallet_type}
-                onChange={(e) => {
-                  set("ewallet_type", e.target.value);
-                  clearErr("ewallet_type");
-                }}
-              >
-                <option value="">
-                  {en ? "Select a disbursement method..." : "Pumili ng paraan ng pagbabayad..."}
-                </option>
-                <option value="Cash">
-                  {en
-                    ? "Cash (claim in person at the venue)"
-                    : "Cash (kunin nang personal sa venue)"}
-                </option>
-                <option value="GCash">GCash</option>
-              </select>
-              <ErrorMsg field="ewallet_type" />
-            </div>
-
-            {form.ewallet_type === "GCash" && (
+              <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
+                {en ? "Disbursement" : "Pagpapalabas ng Pondo"}
+              </p>
               <div
                 ref={(el) => {
-                  fieldRefs.current.ewallet_number = el;
+                  fieldRefs.current.ewallet_type = el;
                 }}
               >
                 <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
-                  {en ? "GCash Account Number *" : "Numero ng GCash Account *"}{" "}
-                  <span className="font-normal text-[#8c8b88]">
-                    {en ? "must be registered in your name" : "dapat sa iyong pangalan"}
-                  </span>
+                  {en
+                    ? "How would you like to receive this subsidy? *"
+                    : "Paano mo nais matanggap ang subsidy na ito? *"}
                 </label>
-                <input
-                  className={inputCls("ewallet_number")}
-                  placeholder="0996-XXX-XXXX"
-                  value={form.ewallet_number}
+                <select
+                  className={inputCls("ewallet_type")}
+                  value={form.ewallet_type}
                   onChange={(e) => {
-                    set("ewallet_number", e.target.value);
-                    clearErr("ewallet_number");
+                    set("ewallet_type", e.target.value);
+                    clearErr("ewallet_type");
                   }}
-                />
-                <ErrorMsg field="ewallet_number" />
+                >
+                  <option value="">
+                    {en ? "Select a disbursement method..." : "Pumili ng paraan ng pagbabayad..."}
+                  </option>
+                  <option value="Cash">
+                    {en
+                      ? "Cash (claim in person at the venue)"
+                      : "Cash (kunin nang personal sa venue)"}
+                  </option>
+                  <option value="GCash">GCash</option>
+                </select>
+                <ErrorMsg field="ewallet_type" />
               </div>
-            )}
-            {renderTutorialCard(
-              4,
-              "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
-            )}
-          </div>
+
+              {form.ewallet_type === "GCash" && (
+                <div
+                  ref={(el) => {
+                    fieldRefs.current.ewallet_number = el;
+                  }}
+                >
+                  <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
+                    {en ? "GCash Account Number *" : "Numero ng GCash Account *"}{" "}
+                    <span className="font-normal text-[#8c8b88]">
+                      {en ? "must be registered in your name" : "dapat sa iyong pangalan"}
+                    </span>
+                  </label>
+                  <input
+                    className={inputCls("ewallet_number")}
+                    placeholder="0996-XXX-XXXX"
+                    value={form.ewallet_number}
+                    onChange={(e) => {
+                      set("ewallet_number", e.target.value);
+                      clearErr("ewallet_number");
+                    }}
+                  />
+                  <ErrorMsg field="ewallet_number" />
+                </div>
+              )}
+              {renderTutorialCard(
+                4,
+                "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+              )}
+            </div>
+          )}
 
           <div id="tut-step-5" className="flex flex-col gap-3">
             <button
