@@ -42,6 +42,7 @@ import { Route as AdminSupportRouteImport } from './routes/admin.support'
 import { Route as AdminProfileRouteImport } from './routes/admin.profile'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminClaimsRouteImport } from './routes/admin.claims'
+import { Route as AdminApplicationsTableRouteImport } from './routes/admin.applications-table'
 import { Route as AdminApplicationsDetailRouteImport } from './routes/admin.applications-detail'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 
@@ -210,6 +211,11 @@ const AdminClaimsRoute = AdminClaimsRouteImport.update({
   path: '/admin/claims',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminApplicationsTableRoute = AdminApplicationsTableRouteImport.update({
+  id: '/admin/applications-table',
+  path: '/admin/applications-table',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminApplicationsDetailRoute = AdminApplicationsDetailRouteImport.update({
   id: '/admin/applications-detail',
   path: '/admin/applications-detail',
@@ -251,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/updates-detail': typeof UpdatesDetailRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/applications-detail': typeof AdminApplicationsDetailRoute
+  '/admin/applications-table': typeof AdminApplicationsTableRoute
   '/admin/claims': typeof AdminClaimsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/profile': typeof AdminProfileRoute
@@ -288,6 +295,7 @@ export interface FileRoutesByTo {
   '/updates-detail': typeof UpdatesDetailRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/applications-detail': typeof AdminApplicationsDetailRoute
+  '/admin/applications-table': typeof AdminApplicationsTableRoute
   '/admin/claims': typeof AdminClaimsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/profile': typeof AdminProfileRoute
@@ -326,6 +334,7 @@ export interface FileRoutesById {
   '/updates-detail': typeof UpdatesDetailRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/applications-detail': typeof AdminApplicationsDetailRoute
+  '/admin/applications-table': typeof AdminApplicationsTableRoute
   '/admin/claims': typeof AdminClaimsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/profile': typeof AdminProfileRoute
@@ -365,6 +374,7 @@ export interface FileRouteTypes {
     | '/updates-detail'
     | '/admin/applications'
     | '/admin/applications-detail'
+    | '/admin/applications-table'
     | '/admin/claims'
     | '/admin/events'
     | '/admin/profile'
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/updates-detail'
     | '/admin/applications'
     | '/admin/applications-detail'
+    | '/admin/applications-table'
     | '/admin/claims'
     | '/admin/events'
     | '/admin/profile'
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/updates-detail'
     | '/admin/applications'
     | '/admin/applications-detail'
+    | '/admin/applications-table'
     | '/admin/claims'
     | '/admin/events'
     | '/admin/profile'
@@ -477,6 +489,7 @@ export interface RootRouteChildren {
   UpdatesDetailRoute: typeof UpdatesDetailRoute
   AdminApplicationsRoute: typeof AdminApplicationsRoute
   AdminApplicationsDetailRoute: typeof AdminApplicationsDetailRoute
+  AdminApplicationsTableRoute: typeof AdminApplicationsTableRoute
   AdminClaimsRoute: typeof AdminClaimsRoute
   AdminEventsRoute: typeof AdminEventsRoute
   AdminProfileRoute: typeof AdminProfileRoute
@@ -718,6 +731,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClaimsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/applications-table': {
+      id: '/admin/applications-table'
+      path: '/admin/applications-table'
+      fullPath: '/admin/applications-table'
+      preLoaderRoute: typeof AdminApplicationsTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/applications-detail': {
       id: '/admin/applications-detail'
       path: '/admin/applications-detail'
@@ -765,6 +785,7 @@ const rootRouteChildren: RootRouteChildren = {
   UpdatesDetailRoute: UpdatesDetailRoute,
   AdminApplicationsRoute: AdminApplicationsRoute,
   AdminApplicationsDetailRoute: AdminApplicationsDetailRoute,
+  AdminApplicationsTableRoute: AdminApplicationsTableRoute,
   AdminClaimsRoute: AdminClaimsRoute,
   AdminEventsRoute: AdminEventsRoute,
   AdminProfileRoute: AdminProfileRoute,

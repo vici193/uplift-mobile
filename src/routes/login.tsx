@@ -25,8 +25,8 @@ const tutSteps = (en: boolean) => [
   },
   {
     text: en
-      ? "Don't have an account yet? Click here to register and create your UPLIFT profile."
-      : "Wala ka pang rehistro? Pindutin ito upang magrehistro at gumawa ng iyong pagkakakilanlan sa UPLIFT.",
+      ? "Don't have an account yet? Click here to register and create your PARA profile."
+      : "Wala ka pang rehistro? Pindutin ito upang magrehistro at gumawa ng iyong pagkakakilanlan sa PARA.",
     target: "tut-step-3",
   },
   {
@@ -201,7 +201,7 @@ function LoginPage() {
 
         <h1 className="mt-4 text-center text-3xl font-bold text-[#1b2b4b]">
           {en ? "Welcome back to" : "Maligayang pagbabalik sa"}{" "}
-          <span className="text-[#f5a623]">UPLIFT!</span>
+          <span className="text-[#f5a623]">PARA!</span>
         </h1>
         <p className="mt-2 text-center text-[13px] font-medium text-slate-500">
           {en
@@ -314,8 +314,8 @@ function LoginPage() {
               {en ? "Security Note:" : "Paalala sa Kaligtasan:"}
             </strong>{" "}
             {en
-              ? "UPLIFT will never ask for your password or OTP over calls or SMS."
-              : "Hindi kailanman hihingiin ng UPLIFT ang iyong password o kodigo sa pamamagitan ng tawag o mensahe."}
+              ? "PARA will never ask for your password or OTP over calls or SMS."
+              : "Hindi kailanman hihingiin ng PARA ang iyong password o kodigo sa pamamagitan ng tawag o mensahe."}
           </p>
         </div>
 

@@ -325,7 +325,7 @@ function SignupPage() {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <h1 className="text-center text-2xl font-bold">
-            UP<span className="text-[#f5a623]">LIFT</span>
+            PA<span className="text-[#f5a623]">RA</span>
           </h1>
         </div>
 
@@ -379,7 +379,7 @@ function SignupPage() {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <h1 className="text-center text-2xl font-bold">
-          UP<span className="text-[#f5a623]">LIFT</span>
+          PA<span className="text-[#f5a623]">RA</span>
         </h1>
         <button
           onClick={() => setTutStep(1)}

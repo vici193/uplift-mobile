@@ -8,6 +8,7 @@ import { useSession } from "@/lib/session-context";
 import { supabase } from "@/supabase";
 import {
   formatCaseNumber,
+  formatEwalletNumber,
   formatLicenseNumber,
   formatMobileDisplay,
   formatPlateNumber,
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/apply-detail")({
   validateSearch: searchSchema,
 });
 // Temporarily hidden — set back to true to re-enable the Disbursement section.
-const SHOW_DISBURSEMENT = false;
+const SHOW_DISBURSEMENT = true;
 const months = [
   "January",
   "February",
@@ -203,6 +204,11 @@ function ApplyDetailPage() {
       }
       const { data } = await supabase.from("payout_events").select("*").eq("id", eventId).single();
       setEvent(data);
+      if (data?.disbursement_mode === "cash") {
+        setForm((p) => ({ ...p, ewallet_type: "Cash" }));
+      } else if (data?.disbursement_mode === "gcash") {
+        setForm((p) => ({ ...p, ewallet_type: "GCash" }));
+      }
       setLoading(false);
     }
     load();
@@ -257,6 +263,8 @@ function ApplyDetailPage() {
           rejection_fields: null,
           rejection_has_fields: false,
           admin_message: null,
+          ewallet_type: form.ewallet_type || null,
+          ewallet_number: form.ewallet_type === "GCash" ? form.ewallet_number : null,
         })
         .eq("id", targetAppId);
       errorObj = error;
@@ -270,6 +278,8 @@ function ApplyDetailPage() {
         event_id: event.id,
         status: "pending",
         applied_at: new Date().toISOString(),
+        ewallet_type: form.ewallet_type || null,
+        ewallet_number: form.ewallet_type === "GCash" ? form.ewallet_number : null,
       });
       errorObj = error;
     }
@@ -933,24 +943,39 @@ function ApplyDetailPage() {
                     ? "How would you like to receive this subsidy? *"
                     : "Paano mo nais matanggap ang subsidy na ito? *"}
                 </label>
-                <select
-                  className={inputCls("ewallet_type")}
-                  value={form.ewallet_type}
-                  onChange={(e) => {
-                    set("ewallet_type", e.target.value);
-                    clearErr("ewallet_type");
-                  }}
-                >
-                  <option value="">
-                    {en ? "Select a disbursement method..." : "Pumili ng paraan ng pagbabayad..."}
-                  </option>
-                  <option value="Cash">
-                    {en
-                      ? "Cash (claim in person at the venue)"
-                      : "Cash (kunin nang personal sa venue)"}
-                  </option>
-                  <option value="GCash">GCash</option>
-                </select>
+                {(event?.disbursement_mode || "both") === "both" ? (
+                  <select
+                    className={inputCls("ewallet_type")}
+                    value={form.ewallet_type}
+                    onChange={(e) => {
+                      set("ewallet_type", e.target.value);
+                      clearErr("ewallet_type");
+                    }}
+                  >
+                    <option value="">
+                      {en ? "Select a disbursement method..." : "Pumili ng paraan ng pagbabayad..."}
+                    </option>
+                    <option value="Cash">
+                      {en
+                        ? "Cash (claim in person at the venue)"
+                        : "Cash (kunin nang personal sa venue)"}
+                    </option>
+                    <option value="GCash">GCash</option>
+                  </select>
+                ) : (
+                  <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm font-semibold text-[#1b2b4b]">
+                    {event?.disbursement_mode === "gcash"
+                      ? "GCash"
+                      : en
+                        ? "Cash (claim in person at the venue)"
+                        : "Cash (kunin nang personal sa venue)"}
+                    <span className="ml-2 text-[11px] font-normal text-[#8c8b88]">
+                      {en
+                        ? "\u2014 this event only supports this method"
+                        : "\u2014 tanging paraan lamang ito para sa event na ito"}
+                    </span>
+                  </div>
+                )}
                 <ErrorMsg field="ewallet_type" />
               </div>
 
@@ -968,10 +993,10 @@ function ApplyDetailPage() {
                   </label>
                   <input
                     className={inputCls("ewallet_number")}
-                    placeholder="0996-XXX-XXXX"
-                    value={form.ewallet_number}
+                    placeholder="0996 XXX XXXX"
+                    value={formatEwalletNumber(form.ewallet_number)}
                     onChange={(e) => {
-                      set("ewallet_number", e.target.value);
+                      set("ewallet_number", formatEwalletNumber(e.target.value));
                       clearErr("ewallet_number");
                     }}
                   />

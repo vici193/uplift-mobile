@@ -5,6 +5,7 @@ import { ArrowLeft, QrCode, Search, CheckCircle2 } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { AdminBottomNav } from "@/components/mobile/AdminBottomNav";
 import { supabase } from "@/supabase";
+import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/admin/claims")({
   component: AdminClaims,
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/admin/claims")({
 
 function AdminClaims() {
   const navigate = useNavigate();
+  const { en } = useSession();
   const [manualCode, setManualCode] = useState("");
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
@@ -44,16 +46,16 @@ function AdminClaims() {
     setLooking(false);
 
     if (!appt) {
-      setLookupError("No matching reference code found.");
+      setLookupError(en ? "No matching reference code found." : "Walang natagpuang katugmang reference code.");
       return;
     }
     const app = appt.applications;
     if (app.status === "claimed") {
-      setLookupError(`Already released on ${new Date(app.claimed_at).toLocaleString("en-PH")}.`);
+      setLookupError(en ? `Already released on ${new Date(app.claimed_at).toLocaleString("en-PH")}.` : `Nailabas na noong ${new Date(app.claimed_at).toLocaleString("en-PH")}.`);
       return;
     }
     if (app.status !== "approved") {
-      setLookupError("This application is not in approved status.");
+      setLookupError(en ? "This application is not in approved status." : "Ang aplikasyong ito ay wala sa naaprubahang kalagayan.");
       return;
     }
     setLookupResult({ appointment: appt, application: app });
@@ -62,7 +64,7 @@ function AdminClaims() {
   async function confirmRelease() {
     if (!lookupResult) return;
     if (!officerName.trim()) {
-      showToast("Please enter the releasing officer's name.");
+      showToast(en ? "Please enter the releasing officer's name." : "Mangyaring ilagay ang pangalan ng opisyal na naglalabas.");
       return;
     }
     setReleasing(true);
@@ -79,19 +81,19 @@ function AdminClaims() {
     if (!err) {
       await supabase.from("application_messages").insert({
         application_id: app.id,
-        message: "Subsidy successfully claimed at venue.",
+        message: en ? "Subsidy successfully claimed at venue." : "Matagumpay na natanggap ang subsidy sa takdang lugar.",
         sent_by: "admin",
       });
     }
     setReleasing(false);
     if (err) {
-      showToast(`Something went wrong: ${err.message}`);
+      showToast(en ? `Something went wrong: ${err.message}` : `May nangyaring mali: ${err.message}`);
       return;
     }
     setLookupResult(null);
     setManualCode("");
     setOfficerName("");
-    showToast("Subsidy marked as released.");
+    showToast(en ? "Subsidy marked as released." : "Minarkahan ang subsidy bilang nailabas na.");
   }
 
   return (
@@ -109,15 +111,15 @@ function AdminClaims() {
         >
           <ArrowLeft className="h-6 w-6 text-[#1b2b4b]" />
         </button>
-        <h1 className="text-lg font-extrabold text-[#1b2b4b]">Verify & Release</h1>
+        <h1 className="text-lg font-extrabold text-[#1b2b4b]">{en ? "Verify & Release" : "Kumpirmahin at Ilabas"}</h1>
       </div>
 
       <div className="min-h-screen bg-white px-5 pb-24 pt-6">
         <button
-          onClick={() => showToast("Camera scanning coming soon.")}
+          onClick={() => showToast(en ? "Camera scanning coming soon." : "Malapit na ang pag-scan gamit ang kamera.")}
           className="mb-6 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 py-6 text-sm font-bold text-[#1b2b4b] transition-all hover:border-[#f5a623]"
         >
-          <QrCode className="h-5 w-5" /> Scan QR Code
+          <QrCode className="h-5 w-5" /> {en ? "Scan QR Code" : "Suriin ang QR Code"}
         </button>
 
         {!lookupResult ? (
@@ -128,7 +130,7 @@ function AdminClaims() {
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && lookupReferenceCode(manualCode)}
-                placeholder="Enter reference code (e.g. REF-12345678)"
+                placeholder={en ? "Enter reference code (e.g. REF-12345678)" : "Ilagay ang reference code (hal. REF-12345678)"}
                 className="flex-1 bg-transparent text-sm font-bold text-[#1b2b4b] outline-none placeholder:text-gray-400"
               />
             </div>
@@ -137,7 +139,7 @@ function AdminClaims() {
               disabled={looking || !manualCode.trim()}
               className="w-full rounded-2xl bg-[#f5a623] py-4 font-bold text-[#1b2b4b] transition-all hover:bg-[#ffc107] active:scale-[0.98] disabled:opacity-60"
             >
-              {looking ? "..." : "Look Up"}
+              {looking ? "..." : (en ? "Look Up" : "Hanapin")}
             </button>
             {lookupError && (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-[13px] font-semibold text-red-600">
@@ -171,7 +173,7 @@ function AdminClaims() {
 
             <div className="mt-4">
               <label className="mb-1.5 block text-[11px] font-bold uppercase text-[#1b2b4b]">
-                Releasing Officer's Name *
+                {en ? "Releasing Officer's Name *" : "Pangalan ng Opisyal na Naglalabas *"}
               </label>
               <input
                 value={officerName}
@@ -187,7 +189,7 @@ function AdminClaims() {
                 disabled={releasing}
                 className="flex-1 rounded-2xl bg-emerald-600 py-3.5 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-60"
               >
-                {releasing ? "..." : "✅ Confirm & Release Subsidy"}
+                {releasing ? "..." : (en ? "✅ Confirm & Release Subsidy" : "✅ Kumpirmahin at Ilabas ang Subsidy")}
               </button>
               <button
                 onClick={() => {
@@ -196,7 +198,7 @@ function AdminClaims() {
                 }}
                 className="flex-1 rounded-2xl border-2 border-gray-200 py-3.5 text-sm font-bold text-[#1b2b4b]"
               >
-                Cancel
+                {en ? "Cancel" : "Kanselahin"}
               </button>
             </div>
           </div>

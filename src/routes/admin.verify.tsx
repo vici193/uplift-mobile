@@ -12,33 +12,15 @@ import {
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { AdminBottomNav } from "@/components/mobile/AdminBottomNav";
 import { supabase } from "@/supabase";
+import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/admin/verify")({
   component: AdminVerify,
 });
 
-const rejectionOptions = [
-  "Last Name",
-  "First Name",
-  "Middle Name",
-  "Extension Name",
-  "Sex",
-  "Date of Birth",
-  "Region",
-  "Province",
-  "City/Municipality",
-  "Barangay",
-  "Mobile Number",
-  "Denomination",
-  "Case Number",
-  "Operator's Name",
-  "Plate Number",
-  "Chassis Number",
-  "Driver's License No.",
-];
-
 function AdminVerify() {
   const navigate = useNavigate();
+  const { en } = useSession();
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
@@ -47,6 +29,44 @@ function AdminVerify() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState("");
+
+  const rejectionOptions = en ? [
+    "Last Name",
+    "First Name",
+    "Middle Name",
+    "Extension Name",
+    "Sex",
+    "Date of Birth",
+    "Region",
+    "Province",
+    "City/Municipality",
+    "Barangay",
+    "Mobile Number",
+    "Denomination",
+    "Case Number",
+    "Operator's Name",
+    "Plate Number",
+    "Chassis Number",
+    "Driver's License No.",
+  ] : [
+    "Apelyido",
+    "Pangalan",
+    "Gitnang Pangalan",
+    "Karugtong na Pangalan",
+    "Kasarian",
+    "Araw ng Kapanganakan",
+    "Rehiyon",
+    "Lalawigan",
+    "Lungsod/Bayan",
+    "Barangay",
+    "Numero ng Telepono",
+    "Uri ng Sasakyan",
+    "Numero ng Kaso",
+    "Pangalan ng Operator",
+    "Numero ng Plaka",
+    "Numero ng Tsasis",
+    "Numero ng Lisensya sa Pagmamaneho",
+  ];
 
   function showToast(msg: string) {
     setToast(msg);
@@ -75,7 +95,7 @@ function AdminVerify() {
       .update({ verification_status: "verified", verification_notes: notes.trim() || null })
       .eq("id", selected.id);
     setSubmitting(false);
-    showToast("Account verified successfully.");
+    showToast(en ? "Account verified successfully." : "Matagumpay na nakumpirma ang talaan.");
     setSelected(null);
     setNotes("");
     load();
@@ -84,7 +104,7 @@ function AdminVerify() {
   async function rejectDriver() {
     if (!selected) return;
     if (rejectFields.length === 0) {
-      showToast("Please select at least one incorrect field.");
+      showToast(en ? "Please select at least one incorrect field." : "Mangyaring pumili ng kahit isang maling impormasyon.");
       return;
     }
     setSubmitting(true);
@@ -95,7 +115,7 @@ function AdminVerify() {
       .update({ verification_status: "rejected", verification_notes: combined })
       .eq("id", selected.id);
     setSubmitting(false);
-    showToast("Account rejected.");
+    showToast(en ? "Account rejected." : "Tinanggihan ang talaan.");
     setSelected(null);
     setMode(null);
     setRejectFields([]);
@@ -134,7 +154,7 @@ function AdminVerify() {
           <ArrowLeft className="h-6 w-6 text-[#1b2b4b]" />
         </button>
         <h1 className="text-lg font-extrabold text-[#1b2b4b]">
-          {selected ? "Evaluation" : "Verify Accounts"}
+          {selected ? (en ? "Evaluation" : "Pagsusuri") : (en ? "Verify Accounts" : "Kumpirmahin ang mga Talaan")}
         </h1>
       </div>
 
@@ -160,29 +180,29 @@ function AdminVerify() {
 
               <div className="space-y-1.5 border-t border-[#f5a623]/20 pt-4">
                 {[
-                  ["Last Name", selected.last_name],
-                  ["First Name", selected.first_name],
-                  ["Middle Name", selected.middle_name],
-                  ["Extension Name", selected.extension_name],
-                  ["Sex", selected.sex],
+                  [en ? "Last Name" : "Apelyido", selected.last_name],
+                  [en ? "First Name" : "Pangalan", selected.first_name],
+                  [en ? "Middle Name" : "Gitnang Pangalan", selected.middle_name],
+                  [en ? "Extension Name" : "Karugtong na Pangalan", selected.extension_name],
+                  [en ? "Sex" : "Kasarian", selected.sex],
                   [
-                    "Date of Birth",
-                    `${selected.birth_month} ${selected.birth_day}, ${selected.birth_year} (Age: ${selected.age})`,
+                    en ? "Date of Birth" : "Araw ng Kapanganakan",
+                    `${selected.birth_month} ${selected.birth_day}, ${selected.birth_year} (${en ? "Age:" : "Edad:"} ${selected.age})`,
                   ],
-                  ["Region", selected.region],
-                  ["Province", selected.province],
-                  ["City / Municipality", selected.city],
-                  ["Barangay", selected.barangay],
-                  ["Mobile", selected.mobile],
-                  ["Denomination", selected.denomination],
-                  ["Case Number", selected.case_number],
-                  ["Operator's Name", selected.operator_name],
-                  ["Plate Number", selected.plate_number],
-                  ["Chassis Number", selected.chassis_number],
-                  ["Driver's License No.", selected.license_number],
+                  [en ? "Region" : "Rehiyon", selected.region],
+                  [en ? "Province" : "Lalawigan", selected.province],
+                  [en ? "City / Municipality" : "Lungsod/Bayan", selected.city],
+                  [en ? "Barangay" : "Barangay", selected.barangay],
+                  [en ? "Mobile" : "Numero ng Telepono", selected.mobile],
+                  [en ? "Denomination" : "Uri ng Sasakyan", selected.denomination],
+                  [en ? "Case Number" : "Numero ng Kaso", selected.case_number],
+                  [en ? "Operator's Name" : "Pangalan ng Operator", selected.operator_name],
+                  [en ? "Plate Number" : "Numero ng Plaka", selected.plate_number],
+                  [en ? "Chassis Number" : "Numero ng Tsasis", selected.chassis_number],
+                  [en ? "Driver's License No." : "Numero ng Lisensya sa Pagmamaneho", selected.license_number],
                 ].map(([label, value]) => (
                   <div
-                    key={label}
+                    key={label as string}
                     className="flex items-center justify-between gap-3 rounded-xl bg-white/50 px-3 py-2 text-[12px] shadow-sm"
                   >
                     <span className="font-bold text-gray-500">{label}</span>
@@ -194,18 +214,18 @@ function AdminVerify() {
 
             <div className="space-y-4 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
               <h3 className="flex items-center gap-2 font-bold text-[#1b2b4b]">
-                <FileText size={16} className="text-[#f5a623]" /> Submitted Documents
+                <FileText size={16} className="text-[#f5a623]" /> {en ? "Submitted Documents" : "Mga Ipinasang Dokumento"}
               </h3>
               {documentUrls.length === 0 ? (
                 <div className="flex aspect-video items-center justify-center rounded-2xl border-2 border-dashed border-gray-200">
-                  <p className="text-xs font-bold text-gray-400">No documents submitted yet.</p>
+                  <p className="text-xs font-bold text-gray-400">{en ? "No documents submitted yet." : "Wala pang ipinasang dokumento."}</p>
                 </div>
               ) : (
                 documentUrls.map((url: string, i: number) => (
                   <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
                     {url.trim().toLowerCase().endsWith(".pdf") ? (
                       <div className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 p-6 text-xs font-bold text-gray-400 transition-all hover:border-[#f5a623]">
-                        <ExternalLink size={14} /> Document {i + 1} (PDF) — tap to view
+                        <ExternalLink size={14} /> {en ? `Document ${i + 1} (PDF) — tap to view` : `Dokumento ${i + 1} (PDF) — pindutin upang makita`}
                       </div>
                     ) : (
                       <img
@@ -225,19 +245,19 @@ function AdminVerify() {
                   onClick={() => setMode("reject")}
                   className="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-500 py-4 font-bold text-red-500 transition-all hover:bg-red-500 hover:text-white active:scale-95"
                 >
-                  <XCircle size={20} /> Reject
+                  <XCircle size={20} /> {en ? "Reject" : "Tanggihan"}
                 </button>
                 <button
                   onClick={verifyDriver}
                   disabled={submitting}
                   className="flex items-center justify-center gap-2 rounded-2xl bg-[#1b2b4b] py-4 font-bold text-white transition-all hover:bg-[#f5a623] hover:text-[#1b2b4b] active:scale-95 disabled:opacity-60"
                 >
-                  <CheckCircle2 size={20} /> {submitting ? "..." : "Approve"}
+                  <CheckCircle2 size={20} /> {submitting ? "..." : (en ? "Approve" : "Aprubahan")}
                 </button>
               </div>
             ) : (
               <div className="rounded-3xl border border-red-200 bg-red-50 p-5">
-                <p className="mb-3 text-[13px] font-bold text-red-600">Flag Discrepancy Reasons</p>
+                <p className="mb-3 text-[13px] font-bold text-red-600">{en ? "Flag Discrepancy Reasons" : "Markahan ang mga Dahilan ng Pagkakaiba"}</p>
                 <div className="mb-4 grid grid-cols-2 gap-2">
                   {rejectionOptions.map((opt) => (
                     <label
@@ -260,7 +280,7 @@ function AdminVerify() {
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Notes visible to the driver (optional)..."
+                  placeholder={en ? "Notes visible to the driver (optional)..." : "Mga talang makikita ng tsuper (maaaring hindi sagutan)..."}
                   className="mb-3 min-h-[70px] w-full rounded-2xl border border-gray-100 bg-white p-3 text-[12px]"
                 />
                 <div className="flex gap-2">
@@ -269,7 +289,7 @@ function AdminVerify() {
                     disabled={submitting}
                     className="flex-1 rounded-xl bg-red-600 py-3 text-[13px] font-bold text-white disabled:opacity-60"
                   >
-                    {submitting ? "..." : "Confirm Reject"}
+                    {submitting ? "..." : (en ? "Confirm Reject" : "Kumpirmahin ang Pagtanggi")}
                   </button>
                   <button
                     onClick={() => {
@@ -279,7 +299,7 @@ function AdminVerify() {
                     }}
                     className="flex-1 rounded-xl border border-gray-200 py-3 text-[13px] font-bold text-[#1b2b4b]"
                   >
-                    Cancel
+                    {en ? "Cancel" : "Kanselahin"}
                   </button>
                 </div>
               </div>
@@ -288,18 +308,18 @@ function AdminVerify() {
         ) : (
           <div className="space-y-4">
             <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-[14px] font-extrabold text-[#1b2b4b]">Pending Queue</h2>
+              <h2 className="text-[14px] font-extrabold text-[#1b2b4b]">{en ? "Pending Queue" : "Pila ng mga Nakabinbin"}</h2>
               <span className="rounded-full bg-[#f5a623] px-3 py-1 text-[10px] font-black uppercase text-[#1b2b4b]">
-                {drivers.length} Active
+                {drivers.length} {en ? "Active" : "Aktibo"}
               </span>
             </div>
             {loading ? (
               <div className="rounded-2xl border-2 border-dashed border-gray-100 p-10 text-center text-[#8c8b88]">
-                Loading...
+                {en ? "Loading..." : "Loading..."}
               </div>
             ) : drivers.length === 0 ? (
               <div className="rounded-2xl border-2 border-dashed border-gray-100 p-10 text-center text-[#8c8b88]">
-                No accounts awaiting verification.
+                {en ? "No accounts awaiting verification." : "Walang talaang naghihintay ng pagpapatunay."}
               </div>
             ) : (
               drivers.map((d) => (
@@ -319,7 +339,7 @@ function AdminVerify() {
                     <div>
                       <p className="font-bold text-[#1b2b4b]">{d.full_name}</p>
                       <p className="text-[11px] font-medium text-gray-500">
-                        License: {d.license_number}
+                        {en ? "License:" : "Lisensya:"} {d.license_number}
                       </p>
                     </div>
                   </div>

@@ -25,13 +25,13 @@ export const Route = createFileRoute("/apply")({
 const tutSteps = (en: boolean) => [
   en
     ? "This is Available Subsidies. Every open payout event you qualify for shows up here."
-    : "Ito ang Available Subsidies. Lalabas dito ang lahat ng bukas na payout event na kwalipikado ka.",
+    : "Ito ang Mga Bukas na Subsidy. Lalabas dito ang lahat ng bukas na kaganapan sa pagbabayad kung saan ka karapat-dapat.",
   en
     ? "Each card shows the program's amount, agency, payout schedule, venue, and the application deadline — take note of the deadline, since late applications won't be accepted."
-    : "Ipinapakita ng bawat card ang halaga, ahensya, iskedyul ng payout, venue, at deadline — pansinin ang deadline, dahil hindi tinatanggap ang mga huling aplikasyon.",
+    : "Ipinapakita ng bawat kard ang halaga, ahensya, takdang oras ng pagbabayad, takdang lugar, at huling araw ng pagpapasa — pansinin ang huling araw, dahil hindi tatanggapin ang mga nahuling aplikasyon.",
   en
     ? "Tap 'Apply' on a subsidy you qualify for to start your application. Once you've applied, this turns into a status pill instead."
-    : "I-tap ang 'Mag-apply' sa subsidy na kwalipikado ka para simulan ang aplikasyon. Kapag naka-apply ka na, magiging status pill na lang ito.",
+    : "Pindutin ang 'Magpasa' sa subsidy kung saan ka karapat-dapat para simulan ang aplikasyon. Kapag nakapagpasa ka na, magiging tanda ng kalagayan na lamang ito.",
 ];
 
 function statusMeta(status: string, en: boolean) {
@@ -134,7 +134,7 @@ function ApplyBrowsePage() {
             {tutStep}/{steps.length}
           </div>
           <h3 className="text-lg font-bold text-white">
-            {en ? "Apply Guide" : "Gabay sa Pag-apply"}
+            {en ? "Apply Guide" : "Gabay sa Pagpapasa"}
           </h3>
         </div>
         <p className="mb-6 text-sm text-white/80">{steps[tutStep - 1]}</p>
@@ -159,11 +159,11 @@ function ApplyBrowsePage() {
   return (
     <MobileShell bottomNav={<UserBottomNav />}>
       <TopBar
-        title={en ? "Available Subsidies" : "Mga Available na Subsidy"}
+        title={en ? "Available Subsidies" : "Mga Bukas na Subsidy"}
         subtitle={
           en
             ? "Browse and apply for open payout events"
-            : "Tingnan at mag-apply sa mga bukas na payout event"
+            : "Tingnan at magpasa ng aplikasyon sa mga bukas na kaganapan sa pagbabayad"
         }
         // FORCE navigation back to home specifically to break history loops
         onBack={() => navigate({ to: "/home" })}
@@ -172,7 +172,7 @@ function ApplyBrowsePage() {
             <button
               onClick={() => setShowArchived((s) => !s)}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-[#1b2b4b]"
-              title={en ? "Toggle archived" : "Archived"}
+              title={en ? "Toggle archived" : "Ipakita ang mga archived"}
             >
               {showArchived ? (
                 <ArchiveRestore className="h-4 w-4" />
@@ -197,17 +197,17 @@ function ApplyBrowsePage() {
       <div className="flex flex-col gap-4 px-5 pb-24 pt-4">
         {loading ? (
           <div className="rounded-2xl border-2 border-dashed border-[#e6e8eb] p-10 text-center text-[#8c8b88]">
-            {en ? "Loading..." : "Naglo-load..."}
+            {en ? "Loading..." : "Loading..."}
           </div>
         ) : displayEvents.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-[#e6e8eb] p-10 text-center text-[#8c8b88]">
             {showArchived
               ? en
                 ? "No archived events."
-                : "Walang naka-archive."
+                : "Walang nakatagong kaganapan."
               : en
                 ? "No open payout events at the moment."
-                : "Walang bukas na payout event."}
+                : "Walang bukas na kaganapan sa pagbabayad sa ngayon."}
           </div>
         ) : (
           displayEvents.map((event, i) => {
@@ -244,7 +244,7 @@ function ApplyBrowsePage() {
                     {event.application_deadline && (
                       <span className="flex items-center gap-1.5 font-bold text-red-500">
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        {en ? "Apply before:" : "Mag-apply bago ang:"}{" "}
+                        {en ? "Apply before:" : "Magpasa bago ang:"}{" "}
                         {new Date(event.application_deadline).toLocaleString("en-PH", {
                           month: "short",
                           day: "numeric",
@@ -274,10 +274,10 @@ function ApplyBrowsePage() {
                       {archivedIds.includes(event.id)
                         ? en
                           ? "Unarchive"
-                          : "I-unarchive"
+                          : "Ibalik"
                         : en
                           ? "Archive"
-                          : "I-archive"}
+                          : "Itago"}
                     </button>
                   ) : (
                     <span />
@@ -300,7 +300,7 @@ function ApplyBrowsePage() {
                         }
                         className="rounded-full border-2 border-[#1b2b4b] px-4 py-1.5 text-[13px] font-bold text-[#1b2b4b]"
                       >
-                        {en ? "Apply" : "Mag-apply"}
+                        {en ? "Apply" : "Magpasa ng Aplikasyon"}
                       </button>
                     )}
 
@@ -317,7 +317,7 @@ function ApplyBrowsePage() {
           to="/home"
           className="mt-2 block text-center text-xs font-bold text-[#8c8b88] hover:text-[#1b2b4b]"
         >
-          ← {en ? "Back to Home" : "Bumalik sa Home"}
+          ← {en ? "Back to Home" : "Bumalik sa Pambungad"}
         </Link>
       </div>
     </MobileShell>

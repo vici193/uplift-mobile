@@ -16,12 +16,14 @@ import admin from "@/assets/admin.png";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { AdminBottomNav } from "@/components/mobile/AdminBottomNav";
 import { supabase } from "@/supabase";
+import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminHome,
 });
 
 function AdminHome() {
+  const { en } = useSession();
   const [kpi, setKpi] = useState({
     drivers: 0,
     apps: 0,
@@ -89,11 +91,14 @@ function AdminHome() {
               </div>
               <div>
                 <p className="text-[11px] font-medium text-white/70">
-                  {loading ? "Loading..." : "UPLIFT"}
+                  {loading ? (en ? "Loading..." : "Loading...") : "UPLIFT"}
                 </p>
-                <p className="text-[18px] font-extrabold">Admin Panel Desk</p>
+                <p className="text-[18px] font-extrabold">
+                  {en ? "Admin Panel Desk" : "Admin Panel Desk"}
+                </p>
                 <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                  <CheckCircle2 className="h-3 w-3" /> Subsidy Core Suite
+                  <CheckCircle2 className="h-3 w-3" />{" "}
+                  {en ? "Subsidy Core Suite" : "Pangunahing Sistema ng Subsidy"}
                 </div>
               </div>
             </div>
@@ -104,30 +109,32 @@ function AdminHome() {
       <div className="mt-6 space-y-6 px-5 pb-8">
         <section>
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-[14px] font-extrabold text-[#1b2b4b]">Today's Overview</h2>
+            <h2 className="text-[14px] font-extrabold text-[#1b2b4b]">
+              {en ? "Today's Overview" : "Buod Ngayon"}
+            </h2>
             <Link
               to="/admin/applications"
               className="text-[11px] font-bold text-[#f5a623] hover:underline"
             >
-              View all
+              {en ? "View all" : "Tingnan lahat"}
             </Link>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
               {
-                label: "Pending Applications",
+                label: en ? "Pending Applications" : "Mga Nakabinbing Aplikasyon",
                 value: kpi.apps,
                 color: "bg-amber-50 text-amber-600",
                 Icon: FileStack,
               },
               {
-                label: "Unverified Users",
+                label: en ? "Unverified Users" : "Hindi Kumpirmadong Gumagamit",
                 value: kpi.unverified,
                 color: "bg-blue-50 text-blue-600",
                 Icon: ShieldCheck,
               },
               {
-                label: "Help Requests",
+                label: en ? "Help Requests" : "Mga Hiling ng Tulong",
                 value: kpi.grievances,
                 color: "bg-red-50 text-red-600",
                 Icon: HelpCircle,
@@ -153,20 +160,29 @@ function AdminHome() {
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 text-center text-[11px] font-bold text-[#8c8b88]">
             <div className="rounded-2xl border border-gray-100 bg-white p-3">
-              {kpi.drivers} <span className="font-medium">total drivers</span>
+              {kpi.drivers}{" "}
+              <span className="font-medium">
+                {en ? "total drivers" : "kabuuang bilang ng mga tsuper"}
+              </span>
             </div>
           </div>
         </section>
 
         <section>
-          <h2 className="mb-3 px-1 text-[14px] font-extrabold text-[#1b2b4b]">Quick Actions</h2>
+          <h2 className="mb-3 px-1 text-[14px] font-extrabold text-[#1b2b4b]">
+            {en ? "Quick Actions" : "Mabilisang Aksyon"}
+          </h2>
           <div className="grid grid-cols-5 gap-2">
             {[
-              { Icon: CalendarDays, label: "Events", to: "/admin/events" },
-              { Icon: FileStack, label: "Applications", to: "/admin/applications" },
-              { Icon: ShieldCheck, label: "Verify", to: "/admin/verify" },
-              { Icon: MessagesSquare, label: "Support", to: "/admin/support" },
-              { Icon: QrCode, label: "Release", to: "/admin/claims" },
+              { Icon: CalendarDays, label: en ? "Events" : "Kaganapan", to: "/admin/events" },
+              {
+                Icon: FileStack,
+                label: en ? "Applications" : "Aplikasyon",
+                to: "/admin/applications",
+              },
+              { Icon: ShieldCheck, label: en ? "Verify" : "Kumpirmahin", to: "/admin/verify" },
+              { Icon: MessagesSquare, label: en ? "Support" : "Suporta", to: "/admin/support" },
+              { Icon: QrCode, label: en ? "Release" : "Ilabas", to: "/admin/claims" },
             ].map((q) => (
               <Link
                 key={q.label}
@@ -184,12 +200,12 @@ function AdminHome() {
 
         <section>
           <h2 className="mb-3 px-1 text-[14px] font-extrabold text-[#1b2b4b]">
-            Recent Pending Applications
+            {en ? "Recent Pending Applications" : "Kamakailang Nakabinbing Aplikasyon"}
           </h2>
           <div className="space-y-3">
             {recent.length === 0 ? (
               <div className="rounded-2xl border-2 border-dashed border-gray-100 p-6 text-center text-[12px] text-[#8c8b88]">
-                No pending applications.
+                {en ? "No pending applications." : "Walang nakabinbing aplikasyon."}
               </div>
             ) : (
               recent.map((a: any, i: number) => (

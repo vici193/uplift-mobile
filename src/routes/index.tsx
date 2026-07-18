@@ -36,13 +36,13 @@ function Landing() {
         </div>
 
         <h1 className="text-6xl font-extrabold tracking-tight text-[#1b2b4b]">
-          UP<span className="text-[#f5a623]">LIFT</span>
+          PA<span className="text-[#f5a623]">RA</span>
         </h1>
 
         <p className="mt-4 max-w-[280px] text-center text-[13px] font-medium leading-relaxed text-[#1b2b4b]/80">
           {en
-            ? "Fast-Track Your Benefits: Secure Verification and Direct Subsidy Applications."
-            : "Mabilis na Benepisyo: Secure na Verification at Direktang Subsidy Applications."}
+            ? "Fast-Track Your Benefits: PARA Dito, PARA sa Drayber."
+            : "Mabilis na Benepisyo: PARA Dito, PARA sa Drayber"}
         </p>
 
         <div className="mt-8 flex w-full justify-center gap-3">

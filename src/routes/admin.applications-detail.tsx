@@ -6,6 +6,7 @@ import { CheckCircle2, X, Loader2, MessageSquare } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { TopBar } from "@/components/mobile/TopBar";
 import { supabase } from "@/supabase";
+import { useSession } from "@/lib/session-context";
 
 const searchSchema = z.object({ id: z.string().optional() });
 
@@ -14,29 +15,10 @@ export const Route = createFileRoute("/admin/applications-detail")({
   validateSearch: searchSchema,
 });
 
-const rejectionOptions = [
-  "Last Name",
-  "First Name",
-  "Middle Name",
-  "Extension Name",
-  "Sex",
-  "Date of Birth",
-  "Region",
-  "Province",
-  "City/Municipality",
-  "Barangay",
-  "Mobile Number",
-  "Denomination",
-  "Case Number",
-  "Operator's Name",
-  "Plate Number",
-  "Chassis Number",
-  "Driver's License No.",
-];
-
 function AdminApplicationDetail() {
   const navigate = useNavigate();
   const { id } = Route.useSearch();
+  const { en } = useSession();
 
   const [app, setApp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +32,46 @@ function AdminApplicationDetail() {
   const [rejectNotes, setRejectNotes] = useState("");
   const [replyMsg, setReplyMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const rejectionOptions = en
+    ? [
+        "Last Name",
+        "First Name",
+        "Middle Name",
+        "Extension Name",
+        "Sex",
+        "Date of Birth",
+        "Region",
+        "Province",
+        "City/Municipality",
+        "Barangay",
+        "Mobile Number",
+        "Denomination",
+        "Case Number",
+        "Operator's Name",
+        "Plate Number",
+        "Chassis Number",
+        "Driver's License No.",
+      ]
+    : [
+        "Apelyido",
+        "Pangalan",
+        "Gitnang Pangalan",
+        "Karugtong na Pangalan",
+        "Kasarian",
+        "Araw ng Kapanganakan",
+        "Rehiyon",
+        "Lalawigan",
+        "Lungsod/Bayan",
+        "Barangay",
+        "Numero ng Telepono",
+        "Uri ng Sasakyan",
+        "Numero ng Kaso",
+        "Pangalan ng Operator",
+        "Numero ng Plaka",
+        "Numero ng Tsasis",
+        "Numero ng Lisensya sa Pagmamaneho",
+      ];
 
   function showToast(msg: string) {
     setToast(msg);
@@ -69,7 +91,9 @@ function AdminApplicationDetail() {
     setApp(data);
     if (data) {
       setApprovalMsg(
-        `Your application for ${data.payout_events?.program_name} has been approved. Please proceed to ${data.payout_events?.venue} on ${data.payout_events?.event_date} between ${data.payout_events?.time_start} and ${data.payout_events?.time_end}. Bring your Driver's License and your reference code.`,
+        en
+          ? `Your application for ${data.payout_events?.program_name} has been approved. Please proceed to ${data.payout_events?.venue} on ${data.payout_events?.event_date} between ${data.payout_events?.time_start} and ${data.payout_events?.time_end}. Bring your Driver's License and your reference code.`
+          : `Naaprubahan ang iyong aplikasyon para sa ${data.payout_events?.program_name}. Mangyaring magtungo sa ${data.payout_events?.venue} sa darating na ${data.payout_events?.event_date} sa pagitan ng ${data.payout_events?.time_start} at ${data.payout_events?.time_end}. Dalhin ang iyong Lisensya sa Pagmamaneho at ang iyong kodigong sanggunian.`,
       );
     }
     setLoading(false);
@@ -77,7 +101,7 @@ function AdminApplicationDetail() {
 
   useEffect(() => {
     load();
-  }, [id]);
+  }, [id, en]);
 
   async function approveApp() {
     if (!app) return;
@@ -107,9 +131,15 @@ function AdminApplicationDetail() {
     });
     setSubmitting(false);
     if (apptError) {
-      showToast(`Approved, but appointment failed: ${apptError.message}`);
+      showToast(
+        en
+          ? `Approved, but appointment failed: ${apptError.message}`
+          : `Naaprubahan, ngunit nabigo sa takdang oras: ${apptError.message}`,
+      );
     } else {
-      showToast("Approved. Appointment created.");
+      showToast(
+        en ? "Approved. Appointment created." : "Naaprubahan. Nakagawa na ng takdang oras.",
+      );
     }
     setMode(null);
     navigate({ to: "/admin/applications" });
@@ -118,12 +148,20 @@ function AdminApplicationDetail() {
   async function confirmReject() {
     if (!app) return;
     if ((rejectOther || blockReapply) && !rejectNotes.trim()) {
-      showToast('Please explain why in the notes when using "Other".');
+      showToast(
+        en
+          ? "Please explain why in the notes when using 'Other'."
+          : "Mangyaring ipaliwanag kung bakit sa mga tala kapag ginagamit ang 'Iba pa'.",
+      );
       return;
     }
     setSubmitting(true);
     const fields = rejectFields.join(", ");
-    const otherLabel = rejectOther ? "Other (does not meet criteria)" : "";
+    const otherLabel = rejectOther
+      ? en
+        ? "Other (does not meet criteria)"
+        : "Iba pa (hindi tumutugon sa mga pamantayan)"
+      : "";
     const allLabels = [fields, otherLabel].filter(Boolean).join(", ");
     const combined = rejectNotes.trim()
       ? `${allLabels}${allLabels ? " — " : ""}${rejectNotes.trim()}`
@@ -138,7 +176,7 @@ function AdminApplicationDetail() {
       })
       .eq("id", app.id);
     setSubmitting(false);
-    showToast("Application rejected.");
+    showToast(en ? "Application rejected." : "Tinanggihan ang aplikasyon.");
     setMode(null);
     navigate({ to: "/admin/applications" });
   }
@@ -158,7 +196,7 @@ function AdminApplicationDetail() {
       })
       .eq("id", app.id);
     setSubmitting(false);
-    showToast("Reply sent to driver.");
+    showToast(en ? "Reply sent to driver." : "Naipadala ang tugon sa tsuper.");
     setMode(null);
     setReplyMsg("");
     load();
@@ -177,8 +215,13 @@ function AdminApplicationDetail() {
   if (!app) {
     return (
       <MobileShell>
-        <TopBar title="Application Details" onBack={() => history.back()} />
-        <div className="p-6 text-center text-sm text-[#8c8b88]">Application not found.</div>
+        <TopBar
+          title={en ? "Application Details" : "Mga Detalye ng Aplikasyon"}
+          onBack={() => history.back()}
+        />
+        <div className="p-6 text-center text-sm text-[#8c8b88]">
+          {en ? "Application not found." : "Hindi natagpuan ang aplikasyon."}
+        </div>
       </MobileShell>
     );
   }
@@ -197,7 +240,10 @@ function AdminApplicationDetail() {
           {toast}
         </div>
       )}
-      <TopBar title="Application Details" onBack={() => history.back()} />
+      <TopBar
+        title={en ? "Application Details" : "Mga Detalye ng Aplikasyon"}
+        onBack={() => history.back()}
+      />
 
       <div className="space-y-6 px-6 pb-24 pt-4">
         <div className="relative overflow-hidden rounded-[32px] bg-[#f5a623] p-6 text-[#1b2b4b] shadow-xl">
@@ -216,7 +262,21 @@ function AdminApplicationDetail() {
               <span
                 className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${badgeCls}`}
               >
-                {app.status}
+                {app.status === "pending"
+                  ? en
+                    ? "Pending"
+                    : "Nakabinbin"
+                  : app.status === "approved"
+                    ? en
+                      ? "Approved"
+                      : "Naaprubahan"
+                    : app.status === "claimed"
+                      ? en
+                        ? "Claimed"
+                        : "Natanggap"
+                      : en
+                        ? "Rejected"
+                        : "Tinanggihan"}
               </span>
             </div>
           </div>
@@ -231,11 +291,11 @@ function AdminApplicationDetail() {
             {app.payout_events?.venue} · {app.payout_events?.event_date}
           </p>
           <p className="mt-2 text-[11px] text-[#8c8b88]">
-            Applied {new Date(app.applied_at).toLocaleString()}
+            {en ? "Applied" : "Applied"} {new Date(app.applied_at).toLocaleString()}
           </p>
           {app.status === "rejected" && app.rejection_fields && (
             <p className="mt-2 rounded-xl bg-red-50 p-2 text-[11px] text-red-600">
-              Rejected: {app.rejection_fields}
+              {en ? "Rejected" : "Tinanggihan"}: {app.rejection_fields}
             </p>
           )}
         </div>
@@ -243,7 +303,7 @@ function AdminApplicationDetail() {
         {app.application_messages?.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-bold uppercase tracking-wider text-[#8c8b88]">
-              Message History
+              {en ? "Message History" : "Kasaysayan ng Mensahe"}
             </p>
             {app.application_messages
               .slice()
@@ -270,19 +330,19 @@ function AdminApplicationDetail() {
                   onClick={() => setMode("reject")}
                   className="flex-1 rounded-xl border border-gray-100 bg-gray-50 py-3 text-[13px] font-bold text-red-600 transition-all hover:border-red-100 hover:bg-red-50 active:scale-95"
                 >
-                  <X className="mr-1 inline h-4 w-4" /> Reject
+                  <X className="mr-1 inline h-4 w-4" /> {en ? "Reject" : "Tanggihan"}
                 </button>
                 <button
                   onClick={() => setMode("reply")}
                   className="flex-1 rounded-xl border border-gray-100 bg-gray-50 py-3 text-[13px] font-bold text-[#1b2b4b] transition-all hover:bg-gray-100 active:scale-95"
                 >
-                  <MessageSquare className="mr-1 inline h-4 w-4" /> Reply
+                  <MessageSquare className="mr-1 inline h-4 w-4" /> {en ? "Reply" : "Tumugon"}
                 </button>
                 <button
                   onClick={() => setMode("approve")}
                   className="flex-1 rounded-xl bg-[#1b2b4b] py-3 text-[13px] font-bold text-white transition-all hover:bg-[#2a3f68] active:scale-95"
                 >
-                  <CheckCircle2 className="mr-1 inline h-4 w-4" /> Approve
+                  <CheckCircle2 className="mr-1 inline h-4 w-4" /> {en ? "Approve" : "Aprubahan"}
                 </button>
               </div>
             )}
@@ -290,7 +350,7 @@ function AdminApplicationDetail() {
             {mode === "approve" && (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="mb-2 text-[13px] font-bold text-emerald-700">
-                  ✅ Approval message for driver:
+                  ✅ {en ? "Approval message for driver:" : "Mensahe ng pag-apruba para sa tsuper:"}
                 </p>
                 <textarea
                   value={approvalMsg}
@@ -303,13 +363,13 @@ function AdminApplicationDetail() {
                     disabled={submitting}
                     className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
                   >
-                    {submitting ? "..." : "Confirm Approval"}
+                    {submitting ? "..." : en ? "Confirm Approval" : "Kumpirmahin ang Pag-apruba"}
                   </button>
                   <button
                     onClick={() => setMode(null)}
                     className="flex-1 rounded-xl border border-gray-200 py-2.5 text-[13px] font-bold text-[#1b2b4b]"
                   >
-                    Cancel
+                    {en ? "Cancel" : "Kanselahin"}
                   </button>
                 </div>
               </div>
@@ -318,34 +378,42 @@ function AdminApplicationDetail() {
             {mode === "reply" && (
               <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
                 <p className="mb-2 text-[13px] font-bold text-[#1b2b4b]">
-                  ✉️ Send a message to the driver:
+                  ✉️ {en ? "Send a message to the driver:" : "Magpadala ng mensahe sa tsuper:"}
                 </p>
                 <div className="mb-2 flex flex-wrap gap-2">
                   <button
                     onClick={() =>
                       setReplyMsg(
-                        `Your application for ${app.payout_events?.program_name} has been received and is now under review. Please expect a result within 3–5 business days.`,
+                        en
+                          ? `Your application for ${app.payout_events?.program_name} has been received and is now under review. Please expect a result within 3–5 business days.`
+                          : `Natanggap na ang iyong aplikasyon para sa ${app.payout_events?.program_name} at kasalukuyang sinusuri. Asahan ang resulta sa loob ng 3-5 araw ng trabaho.`,
                       )
                     }
                     className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-[#1b2b4b]"
                   >
-                    📋 Under Review
+                    📋 {en ? "Under Review" : "Sinusuri pa"}
                   </button>
                   <button
                     onClick={() =>
                       setReplyMsg(
-                        `Your application for ${app.payout_events?.program_name} requires additional information before it can be processed. Please update your details and resubmit.`,
+                        en
+                          ? `Your application for ${app.payout_events?.program_name} requires additional information before it can be processed. Please update your details and resubmit.`
+                          : `Ang iyong aplikasyon para sa ${app.payout_events?.program_name} ay nangangailangan ng karagdagang impormasyon bago ito maproseso. Mangyaring itama ang iyong mga detalye at magpasang muli.`,
                       )
                     }
                     className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-[#1b2b4b]"
                   >
-                    ⚠️ Needs Correction
+                    ⚠️ {en ? "Needs Correction" : "Kailangan ng Pagwawasto"}
                   </button>
                 </div>
                 <textarea
                   value={replyMsg}
                   onChange={(e) => setReplyMsg(e.target.value)}
-                  placeholder="Type your message to the driver..."
+                  placeholder={
+                    en
+                      ? "Type your message to the driver..."
+                      : "Isulat ang iyong mensahe para sa tsuper..."
+                  }
                   className="min-h-[80px] w-full rounded-xl border border-gray-100 bg-white p-3 text-[12px]"
                 />
                 <div className="mt-3 flex gap-2">
@@ -354,13 +422,13 @@ function AdminApplicationDetail() {
                     disabled={submitting || !replyMsg.trim()}
                     className="flex-1 rounded-xl bg-[#1b2b4b] py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
                   >
-                    {submitting ? "..." : "Send Reply"}
+                    {submitting ? "..." : en ? "Send Reply" : "Ipadala ang Tugon"}
                   </button>
                   <button
                     onClick={() => setMode(null)}
                     className="flex-1 rounded-xl border border-gray-200 py-2.5 text-[13px] font-bold text-[#1b2b4b]"
                   >
-                    Cancel
+                    {en ? "Cancel" : "Kanselahin"}
                   </button>
                 </div>
               </div>
@@ -368,7 +436,9 @@ function AdminApplicationDetail() {
 
             {mode === "reject" && (
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-                <p className="mb-2 text-[13px] font-bold text-red-600">Select incorrect fields:</p>
+                <p className="mb-2 text-[13px] font-bold text-red-600">
+                  {en ? "Select incorrect fields:" : "Piliin ang mga maling impormasyon:"}
+                </p>
                 <div className="mb-2 grid grid-cols-2 gap-2">
                   {rejectionOptions.map((opt) => (
                     <label key={opt} className="flex items-center gap-2 text-[11px] text-[#1b2b4b]">
@@ -394,7 +464,9 @@ function AdminApplicationDetail() {
                       if (!e.target.checked) setBlockReapply(false);
                     }}
                   />
-                  Other (does not meet eligibility criteria — explain in notes)
+                  {en
+                    ? "Other (does not meet eligibility criteria — explain in notes)"
+                    : "Iba pa (hindi tumutugon sa mga pamantayan — ipaliwanag sa mga tala)"}
                 </label>
                 {rejectOther && (
                   <label className="mb-2 flex items-center gap-2 rounded-xl bg-red-100 p-2.5 text-[12px] font-bold text-red-700">
@@ -403,19 +475,23 @@ function AdminApplicationDetail() {
                       checked={blockReapply}
                       onChange={(e) => setBlockReapply(e.target.checked)}
                     />
-                    Do not allow user to reapply for this subsidy
+                    {en
+                      ? "Do not allow user to reapply for this subsidy"
+                      : "Huwag pahintulutan ang tsuper na magpasang muli para sa subsidy na ito"}
                   </label>
                 )}
                 {blockReapply && (
                   <p className="mb-2 text-[11px] italic text-red-600">
-                    ⚠️ The driver will NOT be allowed to reapply for this subsidy. Explain why in
-                    the notes below.
+                    ⚠️{" "}
+                    {en
+                      ? "The driver will NOT be allowed to reapply for this subsidy. Explain why in the notes below."
+                      : "HINDI mapapahintulutan ang tsuper na magpasang muli para sa subsidy na ito. Ipaliwanag kung bakit sa mga tala sa ibaba."}
                   </p>
                 )}
                 <textarea
                   value={rejectNotes}
                   onChange={(e) => setRejectNotes(e.target.value)}
-                  placeholder="Add specific notes..."
+                  placeholder={en ? "Add specific notes..." : "Magdagdag ng mga tiyak na tala..."}
                   className="min-h-[60px] w-full rounded-xl border border-gray-100 bg-white p-3 text-[12px]"
                 />
                 <div className="mt-3 flex gap-2">
@@ -424,7 +500,7 @@ function AdminApplicationDetail() {
                     disabled={submitting}
                     className="flex-1 rounded-xl bg-red-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
                   >
-                    {submitting ? "..." : "Confirm Reject"}
+                    {submitting ? "..." : en ? "Confirm Reject" : "Kumpirmahin ang Pagtanggi"}
                   </button>
                   <button
                     onClick={() => {
@@ -436,7 +512,7 @@ function AdminApplicationDetail() {
                     }}
                     className="flex-1 rounded-xl border border-gray-200 py-2.5 text-[13px] font-bold text-[#1b2b4b]"
                   >
-                    Cancel
+                    {en ? "Cancel" : "Kanselahin"}
                   </button>
                 </div>
               </div>

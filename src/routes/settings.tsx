@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Bell, Globe, Moon, Lock, HelpCircle, FileText, ChevronRight } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { TopBar } from "@/components/mobile/TopBar";
+import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/settings")({
 function Toggle({ initial }: { initial?: boolean }) {
   const [on, setOn] = useState(initial ?? false);
   return (
-    <button 
+    <button
       onClick={() => setOn(!on)}
       className={`h-7 w-12 rounded-full p-1 transition-all duration-300 ${on ? "bg-[#f5a623]" : "bg-gray-200"}`}
     >
@@ -21,19 +22,27 @@ function Toggle({ initial }: { initial?: boolean }) {
 }
 
 function SettingsPage() {
+  const { en } = useSession();
+
+  const settingItems = en ? [
+    { icon: Bell, label: "Push notifications", active: true },
+    { icon: Bell, label: "SMS notifications", active: false },
+    { icon: Moon, label: "Dark mode", active: false },
+  ] : [
+    { icon: Bell, label: "Mga abiso sa aplikasyon", active: true },
+    { icon: Bell, label: "Mga abiso sa SMS", active: false },
+    { icon: Moon, label: "Dark Mode", active: false },
+  ];
+
   return (
     <MobileShell>
-      <TopBar title="Settings" onBack={() => history.back()} />
-      
+      <TopBar title={en ? "Settings" : "Mga Pagsasaayos"} onBack={() => history.back()} />
+
       <div className="px-5 pt-4 pb-24 space-y-6">
-        
+
         {/* Account Preferences */}
         <div className="bg-white border border-[#f0f0f0] rounded-[24px] p-2 shadow-sm">
-          {[
-            { icon: Bell, label: "Push notifications", active: true },
-            { icon: Bell, label: "SMS notifications", active: false },
-            { icon: Moon, label: "Dark mode", active: false },
-          ].map((item) => (
+          {settingItems.map((item) => (
             <div key={item.label} className="flex items-center gap-4 p-3">
               <div className="h-10 w-10 rounded-2xl bg-gray-50 grid place-items-center">
                 <item.icon size={18} className="text-[#1b2b4b]" />
@@ -48,20 +57,20 @@ function SettingsPage() {
         <div className="bg-white border border-[#f0f0f0] rounded-[24px] p-2 shadow-sm">
           <div className="flex items-center gap-4 p-3">
             <div className="h-10 w-10 rounded-2xl bg-gray-50 grid place-items-center">
-                <Globe size={18} className="text-[#1b2b4b]" />
+              <Globe size={18} className="text-[#1b2b4b]" />
             </div>
-            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">Language</p>
+            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">{en ? "Language" : "Wika"}</p>
             <select className="text-xs font-bold text-[#f5a623] bg-transparent focus:outline-none">
               <option>English</option>
               <option>Filipino</option>
             </select>
           </div>
-          
+
           <Link to="/password" className="flex items-center gap-4 p-3 hover:bg-gray-50 transition-all rounded-xl">
             <div className="h-10 w-10 rounded-2xl bg-gray-50 grid place-items-center">
-                <Lock size={18} className="text-[#1b2b4b]" />
+              <Lock size={18} className="text-[#1b2b4b]" />
             </div>
-            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">Security & Password</p>
+            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">{en ? "Security & Password" : "Seguridad at Password"}</p>
             <ChevronRight size={18} className="text-[#c1c1c1]" />
           </Link>
         </div>
@@ -70,16 +79,16 @@ function SettingsPage() {
         <div className="bg-white border border-[#f0f0f0] rounded-[24px] p-2 shadow-sm">
           <Link to="/help" className="flex items-center gap-4 p-3 hover:bg-gray-50 transition-all rounded-xl">
             <div className="h-10 w-10 rounded-2xl bg-gray-50 grid place-items-center">
-                <HelpCircle size={18} className="text-[#1b2b4b]" />
+              <HelpCircle size={18} className="text-[#1b2b4b]" />
             </div>
-            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">Help & FAQs</p>
+            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">{en ? "Help & FAQs" : "Help & FAQs"}</p>
             <ChevronRight size={18} className="text-[#c1c1c1]" />
           </Link>
           <Link to="/terms" className="flex items-center gap-4 p-3 hover:bg-gray-50 transition-all rounded-xl">
             <div className="h-10 w-10 rounded-2xl bg-gray-50 grid place-items-center">
-                <FileText size={18} className="text-[#1b2b4b]" />
+              <FileText size={18} className="text-[#1b2b4b]" />
             </div>
-            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">Terms & Privacy</p>
+            <p className="flex-1 text-sm font-bold text-[#1b2b4b]">{en ? "Terms & Privacy" : "Mga Tuntunin at Pagiging Pribado"}</p>
             <ChevronRight size={18} className="text-[#c1c1c1]" />
           </Link>
         </div>
