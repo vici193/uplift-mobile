@@ -1,15 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { z } from "zod";
 import { ArrowLeft, Send, CheckCircle2, Flag } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { AdminBottomNav } from "@/components/mobile/AdminBottomNav";
 import { TopBar } from "@/components/mobile/TopBar";
 import { supabase } from "@/supabase";
-import { useSession } from "@/lib/session-context";
+
+const searchSchema = z.object({ grievanceId: z.string().optional() });
 
 export const Route = createFileRoute("/admin/support")({
   component: AdminSupport,
+  validateSearch: searchSchema,
 });
 
 function getThreadMessages(g: any) {
@@ -24,7 +27,7 @@ function getThreadMessages(g: any) {
 
 function AdminSupport() {
   const navigate = useNavigate();
-  const { en } = useSession();
+  const { grievanceId } = Route.useSearch();
   const [grievances, setGrievances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -55,6 +58,10 @@ function AdminSupport() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (grievanceId) setOpenId(grievanceId);
+  }, [grievanceId]);
+
   const open = openId ? grievances.find((g) => g.id === openId) : null;
 
   async function sendReply() {
@@ -69,21 +76,21 @@ function AdminSupport() {
       .eq("id", open.id);
     setReply("");
     setSending(false);
-    showToast(en ? "Reply sent." : "Naipadala ang tugon.");
+    showToast("Reply sent.");
     load();
   }
 
   async function markResolved() {
     if (!open) return;
     await supabase.from("grievances").update({ status: "resolved" }).eq("id", open.id);
-    showToast(en ? "Marked as resolved." : "Minarkahan bilang lutas na.");
+    showToast("Marked as resolved.");
     load();
   }
 
   // ── Thread view ──
   if (open) {
     const thread = getThreadMessages(open);
-    const programName = open.applications?.payout_events?.program_name || (en ? "General Inquiry" : "Pangkalahatang Katanungan");
+    const programName = open.applications?.payout_events?.program_name || "General Inquiry";
     return (
       <MobileShell>
         {toast && (
@@ -112,11 +119,11 @@ function AdminSupport() {
               onClick={markResolved}
               className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
             >
-              <CheckCircle2 className="h-3.5 w-3.5" /> {en ? "Resolve" : "Lutasin"}
+              <CheckCircle2 className="h-3.5 w-3.5" /> Resolve
             </button>
           ) : (
             <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700">
-              {en ? "Resolved" : "Lutas na"}
+              Resolved
             </span>
           )}
         </div>
@@ -135,7 +142,7 @@ function AdminSupport() {
                   {m.message}
                 </div>
                 <p className="mt-1 text-[10px] text-[#8c8b88]">
-                  {isDriver ? (en ? "Driver" : "Tsuper") : (en ? "You (Admin)" : "Ikaw (Admin)")} ·{" "}
+                  {isDriver ? "Driver" : "You (Admin)"} ·{" "}
                   {new Date(m.created_at).toLocaleString("en-PH", {
                     month: "short",
                     day: "numeric",
@@ -147,7 +154,7 @@ function AdminSupport() {
             );
           })}
           {thread.length > 0 && thread[thread.length - 1].sent_by === "driver" && (
-            <p className="text-[12px] italic text-[#8c8b88]">{en ? "⏳ Awaiting your response..." : "⏳ Naghihintay ng iyong tugon..."}</p>
+            <p className="text-[12px] italic text-[#8c8b88]">⏳ Awaiting your response...</p>
           )}
         </div>
 
@@ -155,7 +162,7 @@ function AdminSupport() {
           <textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
-            placeholder={en ? "Type your reply..." : "Isulat ang iyong tugon..."}
+            placeholder="Type your reply..."
             className="min-h-[44px] flex-1 rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
           />
           <button
@@ -202,15 +209,15 @@ function AdminSupport() {
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          {lastAdmin && <span className="text-[10px] font-bold text-emerald-600">✓ {en ? "Replied" : "Tinugunan"}</span>}
+          {lastAdmin && <span className="text-[10px] font-bold text-emerald-600">✓ Replied</span>}
           {g.status === "resolved" && (
             <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
-              {en ? "Resolved" : "Lutas na"}
+              Resolved
             </span>
           )}
           {g.is_grievance && (
             <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold text-red-600">
-              <Flag className="h-2.5 w-2.5" /> {en ? "Grievance" : "Reklamo"}
+              <Flag className="h-2.5 w-2.5" /> Grievance
             </span>
           )}
         </div>
@@ -221,19 +228,19 @@ function AdminSupport() {
   return (
     <MobileShell bottomNav={<AdminBottomNav />}>
       <TopBar
-        title={en ? "Help Requests" : "Mga Hiling ng Tulong"}
-        subtitle={`${grievances.length} ${en ? "total" : "kabuuan"}`}
+        title="Help Requests"
+        subtitle={`${grievances.length} total`}
         onBack={() => navigate({ to: "/admin" })}
       />
 
       <div className="space-y-6 px-5 pb-24 pt-4">
         {loading ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-100 p-10 text-center text-[#8c8b88]">
-            {en ? "Loading..." : "Nagkakarga..."}
+            Loading...
           </div>
         ) : grievances.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-100 p-10 text-center text-[#8c8b88]">
-            {en ? "No help requests yet." : "Wala pang hiling ng tulong."}
+            No help requests yet.
           </div>
         ) : (
           <>
@@ -245,7 +252,7 @@ function AdminSupport() {
             ))}
             {general.length > 0 && (
               <div>
-                <p className="mb-2 px-1 text-[13px] font-bold text-[#1b2b4b]">{en ? "General Inquiries" : "Mga Pangkalahatang Katanungan"}</p>
+                <p className="mb-2 px-1 text-[13px] font-bold text-[#1b2b4b]">General Inquiries</p>
                 <div className="space-y-3">{general.map(renderRow)}</div>
               </div>
             )}

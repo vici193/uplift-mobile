@@ -91,7 +91,7 @@ function AdminHome() {
               </div>
               <div>
                 <p className="text-[11px] font-medium text-white/70">
-                  {loading ? (en ? "Loading..." : "Loading...") : "UPLIFT"}
+                  {loading ? (en ? "Loading..." : "Loading...") : "SUBI"}
                 </p>
                 <p className="text-[18px] font-extrabold">
                   {en ? "Admin Panel Desk" : "Admin Panel Desk"}

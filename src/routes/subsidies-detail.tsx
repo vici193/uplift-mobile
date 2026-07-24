@@ -18,6 +18,7 @@ import QRCode from "qrcode";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session-context";
+import { supabase } from "@/supabase";
 
 const searchSchema = z.object({
   id: z.string().optional(),
@@ -31,15 +32,64 @@ export const Route = createFileRoute("/subsidies-detail")({
 function SubsidyDetailPage() {
   const navigate = useNavigate();
   const { id } = Route.useSearch();
-  const { en, apps, allAppointments } = useSession();
+  const { en, apps, allAppointments, driverId, refreshApps } = useSession();
 
   const [showQR, setShowQR] = useState(false);
+  const [confirmingReceipt, setConfirmingReceipt] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [filingDispute, setFilingDispute] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const app = apps.find((a: any) => a.id === id);
   // Matched by application_id, not event_id — application_id is unique per application
   // and can never drift, unlike event_id which broke if a driver reapplied to the same event.
   const appt = allAppointments.find((a: any) => a.application_id === id);
+
+  const isDigitalPayout = app?.ewallet_type === "GCash" || app?.ewallet_type === "Maya";
+  const maskedWalletNumber = app?.ewallet_number
+    ? app.ewallet_number.replace(
+        /^(\d{2}).*(\d{3})$/,
+        (_m: string, a: string, b: string) =>
+          `${a}${"X".repeat(Math.max(app.ewallet_number.replace(/\D/g, "").length - 5, 0))}${b}`,
+      )
+    : "";
+
+  async function confirmReceived() {
+    if (!app) return;
+    setConfirmingReceipt(true);
+    await supabase
+      .from("applications")
+      .update({ claim_status: "confirmed", confirmed_at: new Date().toISOString() })
+      .eq("id", app.id);
+    await refreshApps();
+    setConfirmingReceipt(false);
+    setShowConfirmDialog(false);
+  }
+
+  async function fileDispute() {
+    if (!app || !driverId) return;
+    setFilingDispute(true);
+    const message = en
+      ? `I have not received my ${app.ewallet_type} subsidy of ₱${app.payout_events?.program_amount || ""} for "${app.payout_events?.program_name}". Please check on the status of my disbursement.`
+      : `Hindi ko pa natanggap ang aking ${app.ewallet_type} na subsidy na ₱${app.payout_events?.program_amount || ""} para sa "${app.payout_events?.program_name}". Pakitingnan po ang status ng aking disbursement.`;
+    const { data } = await supabase
+      .from("grievances")
+      .insert({
+        driver_id: driverId,
+        application_id: app.id,
+        concern_type: "Subsidy Not Received",
+        message,
+        is_draft: false,
+        status: "submitted",
+        is_grievance: true,
+      })
+      .select()
+      .single();
+    setFilingDispute(false);
+    if (data) {
+      navigate({ to: "/grievance", search: { id: data.id } });
+    }
+  }
 
   useEffect(() => {
     if (showQR && appt?.reference_code && canvasRef.current) {
@@ -69,8 +119,8 @@ function SubsidyDetailPage() {
   const latestMsg =
     app.application_messages?.length > 0
       ? [...app.application_messages].sort(
-        (x: any, y: any) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
-      )[0]
+          (x: any, y: any) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
+        )[0]
       : null;
 
   return (
@@ -151,8 +201,8 @@ function SubsidyDetailPage() {
           </>
         )}
 
-        {/* Real appointment/QR — only shows once approved AND an appointment exists */}
-        {app.status === "approved" && appt && (
+        {/* Cash: real appointment/QR — only shows once approved AND an appointment exists */}
+        {app.status === "approved" && !isDigitalPayout && appt && (
           <>
             <div className="mt-8 w-full rounded-[28px] border border-gray-100 bg-white p-5 text-left shadow-sm">
               <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-[#8c8b88]">
@@ -225,11 +275,94 @@ function SubsidyDetailPage() {
           </>
         )}
 
-        {app.status === "approved" && !appt && (
+        {app.status === "approved" && !isDigitalPayout && !appt && (
           <div className="mt-8 w-full rounded-2xl border border-[#f5a623]/30 bg-[#fffaf0] p-4 text-sm text-[#1b2b4b]">
             {en
               ? "Approved — your appointment details will appear here shortly."
               : "Naaprubahan — lalabas dito ang detalye ng appointment sa lalong madaling panahon."}
+          </div>
+        )}
+
+        {/* GCash/Maya: no venue visit needed — announcement + confirm/dispute instead */}
+        {app.status === "approved" && isDigitalPayout && (
+          <div className="mt-8 w-full">
+            {app.claim_status === "confirmed" ? (
+              <div className="w-full rounded-[28px] border border-emerald-200 bg-emerald-50 p-5 text-center">
+                <p className="font-bold text-emerald-700">
+                  {en ? "\u2705 Receipt Confirmed" : "\u2705 Natanggap na"}
+                </p>
+                <p className="mt-1 text-xs text-emerald-700/70">
+                  {en
+                    ? `You confirmed receiving this via ${app.ewallet_type} on ${new Date(app.confirmed_at || Date.now()).toLocaleDateString()}.`
+                    : `Kinumpirma mong natanggap ito sa pamamagitan ng ${app.ewallet_type} noong ${new Date(app.confirmed_at || Date.now()).toLocaleDateString()}.`}
+                </p>
+              </div>
+            ) : app.claim_status === "sent" ? (
+              <div className="w-full rounded-[28px] border border-[#f5a623]/30 bg-[#fffaf0] p-5 text-left">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[#8c8b88]">
+                  {en ? "Payout Announcement" : "Anunsyo ng Bayad"}
+                </p>
+                <p className="text-sm font-bold text-[#1b2b4b]">
+                  {en
+                    ? `Your ₱${app.payout_events?.program_amount || ""} subsidy was sent to your ${app.ewallet_type}${maskedWalletNumber ? ` (${maskedWalletNumber})` : ""}.`
+                    : `Ang iyong ₱${app.payout_events?.program_amount || ""} na subsidy ay ipinadala na sa iyong ${app.ewallet_type}${maskedWalletNumber ? ` (${maskedWalletNumber})` : ""}.`}
+                </p>
+                <p className="mt-2 text-sm text-[#1b2b4b]/80">
+                  {en ? "Did you receive it?" : "Natanggap mo na ba ito?"}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => setShowConfirmDialog(true)}
+                    className="flex-1 rounded-full bg-emerald-600 py-3 text-sm font-bold text-white transition-transform active:scale-95"
+                  >
+                    {en ? "Yes, I received it" : "Oo, natanggap ko"}
+                  </button>
+                  <button
+                    onClick={fileDispute}
+                    disabled={filingDispute}
+                    className="flex-1 rounded-full border border-red-200 bg-white py-3 text-sm font-bold text-red-600 transition-transform active:scale-95 disabled:opacity-60"
+                  >
+                    {filingDispute ? "..." : en ? "No, I haven't" : "Hindi pa"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-[#1b2b4b]">
+                {en
+                  ? `Your subsidy will be disbursed via ${app.ewallet_type}. We'll notify you here once it's been sent.`
+                  : `Ang iyong subsidy ay ipapadala sa pamamagitan ng ${app.ewallet_type}. Ipapaalam namin dito kapag naipadala na ito.`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showConfirmDialog && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-sm rounded-[28px] bg-white p-5 shadow-2xl">
+              <p className="mb-2 text-sm font-black text-[#1b2b4b]">
+                {en ? "Confirm receipt" : "Kumpirmahin ang pagtanggap"}
+              </p>
+              <p className="mb-4 text-sm text-[#1b2b4b]/80">
+                {en
+                  ? `Confirm you received ₱${app.payout_events?.program_amount || ""} via ${app.ewallet_type}${maskedWalletNumber ? ` (${maskedWalletNumber})` : ""} on ${new Date(app.disbursed_at || Date.now()).toLocaleDateString()}? This can't be undone.`
+                  : `Kumpirmahin na natanggap mo ang ₱${app.payout_events?.program_amount || ""} sa pamamagitan ng ${app.ewallet_type}${maskedWalletNumber ? ` (${maskedWalletNumber})` : ""} noong ${new Date(app.disbursed_at || Date.now()).toLocaleDateString()}? Hindi na ito puwedeng bawiin.`}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={confirmReceived}
+                  disabled={confirmingReceipt}
+                  className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {confirmingReceipt ? "..." : en ? "Yes, confirm" : "Oo, kumpirmahin"}
+                </button>
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-[#1b2b4b]"
+                >
+                  {en ? "Cancel" : "Kanselahin"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

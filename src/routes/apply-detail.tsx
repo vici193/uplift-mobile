@@ -28,6 +28,23 @@ export const Route = createFileRoute("/apply-detail")({
 });
 // Temporarily hidden — set back to true to re-enable the Disbursement section.
 const SHOW_DISBURSEMENT = true;
+
+// Reads an event's disbursement_methods (new, comma-separated e.g. "Cash, GCash"),
+// falling back to the old single-value disbursement_mode field for events created
+// before this was a multi-select, and finally to allowing everything for events
+// that predate disbursement settings entirely.
+function getAllowedDisbursementMethods(ev: any): string[] {
+  if (!ev) return ["Cash", "GCash", "Maya"];
+  if (typeof ev.disbursement_methods === "string" && ev.disbursement_methods.trim()) {
+    return ev.disbursement_methods
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+  }
+  if (ev.disbursement_mode === "cash") return ["Cash"];
+  if (ev.disbursement_mode === "gcash") return ["GCash"];
+  return ["Cash", "GCash", "Maya"];
+}
 const months = [
   "January",
   "February",
@@ -73,6 +90,7 @@ function ApplyDetailPage() {
   const { en, driver, driverId, refreshApps } = useSession();
 
   const [event, setEvent] = useState<any>(null);
+  const allowedDisbursementMethods = getAllowedDisbursementMethods(event);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -179,7 +197,7 @@ function ApplyDetailPage() {
 
     if (SHOW_DISBURSEMENT) {
       req("ewallet_type");
-      if (form.ewallet_type === "GCash") {
+      if (form.ewallet_type === "GCash" || form.ewallet_type === "Maya") {
         req("ewallet_number");
       }
     }
@@ -204,10 +222,9 @@ function ApplyDetailPage() {
       }
       const { data } = await supabase.from("payout_events").select("*").eq("id", eventId).single();
       setEvent(data);
-      if (data?.disbursement_mode === "cash") {
-        setForm((p) => ({ ...p, ewallet_type: "Cash" }));
-      } else if (data?.disbursement_mode === "gcash") {
-        setForm((p) => ({ ...p, ewallet_type: "GCash" }));
+      const methods = getAllowedDisbursementMethods(data);
+      if (methods.length === 1) {
+        setForm((p) => ({ ...p, ewallet_type: methods[0] }));
       }
       setLoading(false);
     }
@@ -264,7 +281,10 @@ function ApplyDetailPage() {
           rejection_has_fields: false,
           admin_message: null,
           ewallet_type: form.ewallet_type || null,
-          ewallet_number: form.ewallet_type === "GCash" ? form.ewallet_number : null,
+          ewallet_number:
+            form.ewallet_type === "GCash" || form.ewallet_type === "Maya"
+              ? form.ewallet_number
+              : null,
         })
         .eq("id", targetAppId);
       errorObj = error;
@@ -279,7 +299,10 @@ function ApplyDetailPage() {
         status: "pending",
         applied_at: new Date().toISOString(),
         ewallet_type: form.ewallet_type || null,
-        ewallet_number: form.ewallet_type === "GCash" ? form.ewallet_number : null,
+        ewallet_number:
+          form.ewallet_type === "GCash" || form.ewallet_type === "Maya"
+            ? form.ewallet_number
+            : null,
       });
       errorObj = error;
     }
@@ -943,7 +966,7 @@ function ApplyDetailPage() {
                     ? "How would you like to receive this subsidy? *"
                     : "Paano mo nais matanggap ang subsidy na ito? *"}
                 </label>
-                {(event?.disbursement_mode || "both") === "both" ? (
+                {allowedDisbursementMethods.length > 1 ? (
                   <select
                     className={inputCls("ewallet_type")}
                     value={form.ewallet_type}
@@ -955,20 +978,27 @@ function ApplyDetailPage() {
                     <option value="">
                       {en ? "Select a disbursement method..." : "Pumili ng paraan ng pagbabayad..."}
                     </option>
-                    <option value="Cash">
-                      {en
-                        ? "Cash (claim in person at the venue)"
-                        : "Cash (kunin nang personal sa venue)"}
-                    </option>
-                    <option value="GCash">GCash</option>
+                    {allowedDisbursementMethods.includes("Cash") && (
+                      <option value="Cash">
+                        {en
+                          ? "Cash (claim in person at the venue)"
+                          : "Cash (kunin nang personal sa venue)"}
+                      </option>
+                    )}
+                    {allowedDisbursementMethods.includes("GCash") && (
+                      <option value="GCash">GCash</option>
+                    )}
+                    {allowedDisbursementMethods.includes("Maya") && (
+                      <option value="Maya">Maya</option>
+                    )}
                   </select>
                 ) : (
                   <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm font-semibold text-[#1b2b4b]">
-                    {event?.disbursement_mode === "gcash"
-                      ? "GCash"
-                      : en
+                    {allowedDisbursementMethods[0] === "Cash"
+                      ? en
                         ? "Cash (claim in person at the venue)"
-                        : "Cash (kunin nang personal sa venue)"}
+                        : "Cash (kunin nang personal sa venue)"
+                      : allowedDisbursementMethods[0] || "Cash"}
                     <span className="ml-2 text-[11px] font-normal text-[#8c8b88]">
                       {en
                         ? "\u2014 this event only supports this method"
@@ -979,14 +1009,16 @@ function ApplyDetailPage() {
                 <ErrorMsg field="ewallet_type" />
               </div>
 
-              {form.ewallet_type === "GCash" && (
+              {(form.ewallet_type === "GCash" || form.ewallet_type === "Maya") && (
                 <div
                   ref={(el) => {
                     fieldRefs.current.ewallet_number = el;
                   }}
                 >
                   <label className="mb-1.5 block text-[12px] font-semibold text-[#1b2b4b]">
-                    {en ? "GCash Account Number *" : "Numero ng GCash Account *"}{" "}
+                    {en
+                      ? `${form.ewallet_type} Account Number *`
+                      : `Numero ng ${form.ewallet_type} Account *`}{" "}
                     <span className="font-normal text-[#8c8b88]">
                       {en ? "must be registered in your name" : "dapat sa iyong pangalan"}
                     </span>

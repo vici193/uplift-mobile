@@ -87,11 +87,14 @@ function tutorialSteps(en: boolean, showVerification: boolean) {
 
 function HomePage() {
   const navigate = useNavigate();
-  const { en, driver, apps, showTutorial, setShowTutorial, refreshApps, handleUploadDocument } = useSession();
+  const { en, driver, apps, showTutorial, setShowTutorial, refreshApps, handleUploadDocument } =
+    useSession();
   const [dashFiles, setDashFiles] = useState<FileList | null>(null);
   const [uploadingDash, setUploadingDash] = useState(false);
 
-  const pending = apps.filter((a) => a.status !== "approved" && a.status !== "claimed" && a.status !== "rejected").length;
+  const pending = apps.filter(
+    (a) => a.status !== "approved" && a.status !== "claimed" && a.status !== "rejected",
+  ).length;
   const approved = apps.filter((a) => a.status === "approved" || a.status === "claimed").length;
   const active = apps.length;
 
@@ -105,7 +108,8 @@ function HomePage() {
   }, []);
 
   const steps = tutorialSteps(en, driver?.verification_status !== "verified");
-  const isHighlighted = (target: string) => tutorialStep > 0 && steps[tutorialStep - 1]?.target === target;
+  const isHighlighted = (target: string) =>
+    tutorialStep > 0 && steps[tutorialStep - 1]?.target === target;
 
   useEffect(() => {
     if (tutorialStep > 0) {
@@ -214,7 +218,9 @@ function HomePage() {
         <div
           className={cn(
             "px-5 pb-2 pt-6 transition-all duration-300 relative",
-            isHighlighted("welcome-area") ? "z-[250] m-2 rounded-[36px] border-4 border-[#f5a623] bg-white shadow-2xl" : "",
+            isHighlighted("welcome-area")
+              ? "z-[250] m-2 rounded-[36px] border-4 border-[#f5a623] bg-white shadow-2xl"
+              : "",
           )}
           id="welcome-area"
         >
@@ -232,10 +238,13 @@ function HomePage() {
                 </div>
                 <div className="flex flex-col text-white transition-colors duration-300 group-hover:text-[#1b2b4b]">
                   <p className="text-[13px] font-medium opacity-80">{getGreeting(en)},</p>
-                  <h1 className="text-xl font-extrabold tracking-wide">{driver?.name || "Driver"}.</h1>
+                  <h1 className="text-xl font-extrabold tracking-wide">
+                    {driver?.name || "Driver"}.
+                  </h1>
                   {driver?.verification_status === "verified" && (
                     <span className="mt-1.5 inline-flex w-max items-center gap-1.5 rounded-full border border-[#10b981]/40 bg-[#10b981]/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#10b981]">
-                      <CheckCircle2 className="h-3 w-3" strokeWidth={3} /> {en ? "Verified Driver" : "Verified na Driver"}
+                      <CheckCircle2 className="h-3 w-3" strokeWidth={3} />{" "}
+                      {en ? "Verified Driver" : "Verified na Driver"}
                     </span>
                   )}
                   {driver?.verification_status === "unverified" && (
@@ -269,7 +278,10 @@ function HomePage() {
               </Link>
             </div>
           </div>
-          {renderTutorialCard("welcome-area", "top-full left-1/2 -translate-x-1/2 mt-2 w-[300px] sm:w-[320px]")}
+          {renderTutorialCard(
+            "welcome-area",
+            "top-full left-1/2 -translate-x-1/2 mt-2 w-[300px] sm:w-[320px]",
+          )}
         </div>
 
         <div className="flex flex-col gap-8 px-5 pb-8 pt-2">
@@ -278,17 +290,27 @@ function HomePage() {
               id="verification-upload"
               className={cn(
                 "rounded-[24px] border-2 border-dashed border-[#f5a623]/50 bg-[#fffaf0] p-5 transition-all relative",
-                isHighlighted("verification-upload") ? "z-[250] border-solid bg-white shadow-2xl ring-4 ring-[#f5a623]" : "",
+                isHighlighted("verification-upload")
+                  ? "z-[250] border-solid bg-white shadow-2xl ring-4 ring-[#f5a623]"
+                  : "",
               )}
             >
               <p className="mb-1 text-[14px] font-extrabold text-[#1b2b4b]">
                 🪪 {en ? "Submit Verification Documents" : "Mag-submit ng Dokumento"}
               </p>
               <ul className="mb-3 list-disc pl-4 text-[11px] leading-relaxed text-[#8c8b88]">
-                <li>{en ? "Selfie while holding your Driver's License" : "Selfie habang hawak ang iyong Driver's License"}</li>
+                <li>
+                  {en
+                    ? "Selfie while holding your Driver's License"
+                    : "Selfie habang hawak ang iyong Driver's License"}
+                </li>
                 <li>{en ? "Front of Driver's License" : "Harap ng Driver's License"}</li>
                 <li>{en ? "Back of Driver's License" : "Likod ng Driver's License"}</li>
-                <li>{en ? "Supporting document (OR/CR, franchise cert, etc.)" : "Suportang dokumento (OR/CR, franchise cert, atbp.)"}</li>
+                <li>
+                  {en
+                    ? "Supporting document (OR/CR, franchise cert, etc.)"
+                    : "Suportang dokumento (OR/CR, franchise cert, atbp.)"}
+                </li>
               </ul>
 
               {driver?.verification_status === "rejected" && (
@@ -341,7 +363,10 @@ function HomePage() {
                 </button>
               )}
 
-              {renderTutorialCard("verification-upload", "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]")}
+              {renderTutorialCard(
+                "verification-upload",
+                "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+              )}
             </div>
           )}
 
@@ -349,11 +374,15 @@ function HomePage() {
             id="latest-updates"
             className={cn(
               "transition-all duration-300 relative",
-              isHighlighted("latest-updates") ? "z-[250] rounded-[36px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl" : "",
+              isHighlighted("latest-updates")
+                ? "z-[250] rounded-[36px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl"
+                : "",
             )}
           >
             <div className="mb-3 flex items-center justify-between px-1">
-              <h2 className="text-[16px] font-extrabold text-[#1b2b4b]">{en ? "Latest updates" : "Pinakabagong Update"}</h2>
+              <h2 className="text-[16px] font-extrabold text-[#1b2b4b]">
+                {en ? "Latest updates" : "Pinakabagong Update"}
+              </h2>
               <Link to="/updates" className="text-[12px] font-bold text-[#f5a623] hover:underline">
                 {en ? "See all" : "Lahat"}
               </Link>
@@ -371,11 +400,15 @@ function HomePage() {
                     key={i}
                     className="flex items-center gap-3 rounded-[24px] border border-[#f0f0f0] bg-[#ffffff] p-4 shadow-sm"
                   >
-                    <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ${update.color} shadow-sm`}>
+                    <div
+                      className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ${update.color} shadow-sm`}
+                    >
                       <update.icon className="h-5 w-5 text-[#ffffff]" />
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <p className="truncate text-[14px] font-bold text-[#1b2b4b]">{update.title}</p>
+                      <p className="truncate text-[14px] font-bold text-[#1b2b4b]">
+                        {update.title}
+                      </p>
                       <p className="truncate text-[12px] text-[#8c8b88]">{update.desc}</p>
                     </div>
                     <ChevronRight className="ml-1 h-5 w-5 text-[#8c8b88]" />
@@ -383,14 +416,19 @@ function HomePage() {
                 ))
               )}
             </div>
-            {renderTutorialCard("latest-updates", "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]")}
+            {renderTutorialCard(
+              "latest-updates",
+              "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+            )}
           </section>
 
           <div
             id="apply-subsidy"
             className={cn(
               "relative transition-all duration-300",
-              isHighlighted("apply-subsidy") ? "z-[250] rounded-[32px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl" : "",
+              isHighlighted("apply-subsidy")
+                ? "z-[250] rounded-[32px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl"
+                : "",
             )}
           >
             <Link
@@ -402,35 +440,60 @@ function HomePage() {
               </div>
               <div className="relative flex min-w-0 flex-1 flex-col justify-center">
                 <span className="inline-flex w-max items-center gap-1 rounded-full bg-[#1b2b4b]/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#1b2b4b]">
-                  <Star className="h-3 w-3 fill-[#1b2b4b]" /> {en ? "Available Now" : "Available Ngayon"}
+                  <Star className="h-3 w-3 fill-[#1b2b4b]" />{" "}
+                  {en ? "Available Now" : "Available Ngayon"}
                 </span>
                 <p className="mt-1 text-[18px] font-extrabold leading-tight text-[#1b2b4b]">
-                  {en ? "Apply for Subsidy" : "Mag-apply ng Subsidy"}
+                  {en ? "Apply for Subsidy" : "Mag-apply para sa Subsidy"}
                 </p>
                 <p className="mt-0.5 text-[11px] font-bold text-[#1b2b4b]/70">
-                  {en ? "Multiple programs · Check eligibility" : "Maraming programa · Tingnan ang eligibility"}
+                  {en
+                    ? "Multiple programs · Check eligibility"
+                    : "Mga programa · Tingnan ang eligibility"}
                 </p>
               </div>
               <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#ffffff]">
                 <ChevronRight className="h-6 w-6 text-[#1b2b4b]" strokeWidth={2.5} />
               </div>
             </Link>
-            {renderTutorialCard("apply-subsidy", "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]")}
+            {renderTutorialCard(
+              "apply-subsidy",
+              "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+            )}
           </div>
 
           <section
             id="my-subsidies"
             className={cn(
               "transition-all duration-300 relative",
-              isHighlighted("my-subsidies") ? "z-[250] rounded-[36px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl" : "",
+              isHighlighted("my-subsidies")
+                ? "z-[250] rounded-[36px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl"
+                : "",
             )}
           >
-            <h2 className="mb-4 px-1 text-[16px] font-extrabold text-[#1b2b4b]">{en ? "My Subsidies" : "Ang Aking mga Subsidy"}</h2>
+            <h2 className="mb-4 px-1 text-[16px] font-extrabold text-[#1b2b4b]">
+              {en ? "My Subsidies" : "Ang Aking mga Subsidy"}
+            </h2>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: en ? "Active" : "Aktibo", val: active, icon: FileText, color: "text-[#3b82f6]" },
-                { label: en ? "Approved" : "Naaprubahan", val: approved, icon: CheckCircle2, color: "text-[#10b981]" },
-                { label: en ? "Pending" : "Nakabinbin", val: pending, icon: Clock, color: "text-[#f5a623]" },
+                {
+                  label: en ? "Active" : "Aktibo",
+                  val: active,
+                  icon: FileText,
+                  color: "text-[#3b82f6]",
+                },
+                {
+                  label: en ? "Approved" : "Naaprubahan",
+                  val: approved,
+                  icon: CheckCircle2,
+                  color: "text-[#10b981]",
+                },
+                {
+                  label: en ? "Pending" : "Nakabinbin",
+                  val: pending,
+                  icon: Clock,
+                  color: "text-[#f5a623]",
+                },
               ].map((s) => (
                 <div
                   key={s.label}
@@ -438,17 +501,24 @@ function HomePage() {
                 >
                   <s.icon className={`h-5 w-5 ${s.color}`} />
                   <span className="text-xl font-black leading-none text-[#1b2b4b]">{s.val}</span>
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#8c8b88]">{s.label}</span>
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#8c8b88]">
+                    {s.label}
+                  </span>
                 </div>
               ))}
             </div>
-            {renderTutorialCard("my-subsidies", "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]")}
+            {renderTutorialCard(
+              "my-subsidies",
+              "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+            )}
           </section>
 
           <div
             className={cn(
               "flex flex-col gap-4 transition-all duration-300 relative",
-              isHighlighted("support-sections") ? "z-[250] rounded-[40px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl" : "",
+              isHighlighted("support-sections")
+                ? "z-[250] rounded-[40px] border-4 border-[#f5a623] bg-white p-2 shadow-2xl"
+                : "",
             )}
             id="support-sections"
           >
@@ -462,8 +532,12 @@ function HomePage() {
                     <HelpCircle size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-[#1b2b4b]">{en ? "FAQs & Guides" : "FAQ at mga Gabay"}</p>
-                    <p className="text-[11px] text-[#8c8b88]">{en ? "Find help and support" : "Humanap ng tulong"}</p>
+                    <p className="font-bold text-[#1b2b4b]">
+                      {en ? "FAQs & Guides" : "FAQ at mga Gabay"}
+                    </p>
+                    <p className="text-[11px] text-[#8c8b88]">
+                      {en ? "Find help and support" : "Humanap ng tulong"}
+                    </p>
                   </div>
                 </div>
                 {expandedSection === "help" ? <ChevronUp size={20} /> : <ChevronRight size={20} />}
@@ -482,7 +556,9 @@ function HomePage() {
 
             <div className="rounded-[32px] border border-[#f0f0f0] bg-white p-5 shadow-sm">
               <button
-                onClick={() => setExpandedSection(expandedSection === "concerns" ? null : "concerns")}
+                onClick={() =>
+                  setExpandedSection(expandedSection === "concerns" ? null : "concerns")
+                }
                 className="flex w-full items-center justify-between"
               >
                 <div className="flex items-center gap-3">
@@ -490,11 +566,19 @@ function HomePage() {
                     <AlertTriangle size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-[#1b2b4b]">{en ? "My concerns" : "Aking mga Alalahanin"}</p>
-                    <p className="text-[11px] text-[#8c8b88]">{en ? "Grievances & issues" : "Mga hinaing at isyu"}</p>
+                    <p className="font-bold text-[#1b2b4b]">
+                      {en ? "My concerns" : "Aking mga Alalahanin"}
+                    </p>
+                    <p className="text-[11px] text-[#8c8b88]">
+                      {en ? "Grievances & issues" : "Mga hinaing at isyu"}
+                    </p>
                   </div>
                 </div>
-                {expandedSection === "concerns" ? <ChevronUp size={20} /> : <ChevronRight size={20} />}
+                {expandedSection === "concerns" ? (
+                  <ChevronUp size={20} />
+                ) : (
+                  <ChevronRight size={20} />
+                )}
               </button>
               {expandedSection === "concerns" && (
                 <div className="mt-5 space-y-2 border-t border-gray-100 pt-4">
@@ -502,7 +586,8 @@ function HomePage() {
                     to="/myconcern"
                     className="flex items-center justify-between rounded-2xl p-3 text-[13px] font-bold text-[#1b2b4b] hover:bg-gray-50"
                   >
-                    {en ? "View my concerns" : "Tingnan ang aking mga alalahanin"} <MessageSquare size={16} />
+                    {en ? "View my concerns" : "Tingnan ang aking mga alalahanin"}{" "}
+                    <MessageSquare size={16} />
                   </Link>
                   <Link
                     to="/grievance"
@@ -515,7 +600,10 @@ function HomePage() {
             </div>
 
             {/* Pop upwards for the last item to prevent overflow at the bottom of the screen */}
-            {renderTutorialCard("support-sections", "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]")}
+            {renderTutorialCard(
+              "support-sections",
+              "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+            )}
           </div>
         </div>
       </div>

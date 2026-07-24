@@ -45,7 +45,7 @@ const emptyForm = {
   application_deadline: "",
   description: "",
   qualified_denominations: [] as string[],
-  disbursement_mode: "both" as "both" | "cash" | "gcash",
+  disbursement_methods: ["Cash", "GCash", "Maya"] as string[],
 };
 
 function AdminEvents() {
@@ -95,6 +95,21 @@ function AdminEvents() {
         ? p.qualified_denominations.filter((x) => x !== d)
         : [...p.qualified_denominations, d],
     }));
+  }
+
+  function toggleDisbursementMethod(m: string) {
+    setForm((p) => ({
+      ...p,
+      disbursement_methods: p.disbursement_methods.includes(m)
+        ? p.disbursement_methods.filter((x) => x !== m)
+        : [...p.disbursement_methods, m],
+    }));
+    setFieldErrors((p) => {
+      if (!p.disbursement_methods) return p;
+      const n = { ...p };
+      delete n.disbursement_methods;
+      return n;
+    });
   }
 
   function addBatch() {
@@ -159,7 +174,15 @@ function AdminEvents() {
         .split(",")
         .map((s: string) => s.trim())
         .filter(Boolean),
-      disbursement_mode: ev.disbursement_mode || "both",
+      disbursement_methods: Array.isArray(ev.disbursement_methods)
+        ? ev.disbursement_methods
+        : typeof ev.disbursement_methods === "string" && ev.disbursement_methods.trim()
+          ? ev.disbursement_methods.split(",").map((s: string) => s.trim())
+          : ev.disbursement_mode === "cash"
+            ? ["Cash"]
+            : ev.disbursement_mode === "gcash"
+              ? ["GCash"]
+              : ["Cash", "GCash", "Maya"],
     });
     setView("create");
   }
@@ -184,6 +207,9 @@ function AdminEvents() {
     if (form.batches.length === 0 || incompleteBatch) {
       errs.batches = "Every batch needs a label, start time, and end time.";
     }
+    if (form.disbursement_methods.length === 0) {
+      errs.disbursement_methods = "Select at least one disbursement method.";
+    }
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -204,7 +230,7 @@ function AdminEvents() {
       description: form.description || null,
       qualified_denominations:
         form.qualified_denominations.length > 0 ? form.qualified_denominations.join(", ") : null,
-      disbursement_mode: form.disbursement_mode,
+      disbursement_methods: form.disbursement_methods.join(", "),
     };
     const { error } = editingEvent
       ? await supabase.from("payout_events").update(payload).eq("id", editingEvent.id)
@@ -465,35 +491,38 @@ function AdminEvents() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase text-[#1b2b4b]">
-                  Disbursement Method
+                  Disbursement Methods
                 </label>
                 <p className="text-[10px] text-[#8c8b88]">
-                  Choose what payout options drivers see when applying. If you restrict this to Cash
-                  Only or GCash Only, drivers won't be asked to choose — it's set for them
-                  automatically.
+                  Choose which payout options are available for this event. If only one is checked,
+                  drivers won't be asked to choose — it's set for them automatically. If more than
+                  one is checked, drivers pick from just those options.
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      { value: "both", label: "Cash & GCash" },
-                      { value: "cash", label: "Cash Only" },
-                      { value: "gcash", label: "GCash Only" },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => set("disbursement_mode", opt.value)}
-                      className={`rounded-2xl border p-3 text-[12px] font-bold transition-all ${
-                        form.disbursement_mode === opt.value
+                  {(["Cash", "GCash", "Maya"] as const).map((m) => (
+                    <label
+                      key={m}
+                      className={`flex cursor-pointer items-center justify-center gap-2 rounded-2xl border p-3 text-[12px] font-bold transition-all ${
+                        form.disbursement_methods.includes(m)
                           ? "border-[#f5a623] bg-[#f5a623]/10 text-[#1b2b4b]"
                           : "border-gray-100 bg-gray-50 text-gray-500 hover:bg-gray-100"
                       }`}
                     >
-                      {opt.label}
-                    </button>
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={form.disbursement_methods.includes(m)}
+                        onChange={() => toggleDisbursementMethod(m)}
+                      />
+                      {m}
+                    </label>
                   ))}
                 </div>
+                {fieldErrors.disbursement_methods && (
+                  <p className="text-[11px] font-semibold text-red-500">
+                    ⚠️ {fieldErrors.disbursement_methods}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase text-[#1b2b4b]">

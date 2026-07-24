@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { CheckCircle2, X, Loader2, MessageSquare } from "lucide-react";
@@ -77,28 +77,35 @@ const columns: { key: string; label: string; get: (a: any) => string }[] = [
   },
   {
     key: "ewallet_number",
-    label: "GCash No.",
-    get: (a) => (a.ewallet_type === "GCash" ? a.ewallet_number || "" : "\u2014"),
+    label: "E-Wallet No.",
+    get: (a) =>
+      a.ewallet_type === "GCash" || a.ewallet_type === "Maya" ? a.ewallet_number || "" : "\u2014",
   },
 ];
 
 function AdminApplicationsTable() {
+  const navigate = useNavigate();
   const { event: eventId } = Route.useSearch();
 
   const [ev, setEv] = useState<any>(null);
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
+  const [disputedIds, setDisputedIds] = useState<Map<string, string>>(new Map());
+
+  const [statusTab, setStatusTab] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [methodFilter, setMethodFilter] = useState<"all" | "Cash" | "GCash" | "Maya">("all");
 
   const [batchSelect, setBatchSelect] = useState<Record<string, string>>({});
   const [activeRow, setActiveRow] = useState<any | null>(null);
-  const [mode, setMode] = useState<null | "approve" | "reject" | "reply">(null);
+  const [mode, setMode] = useState<null | "approve" | "reject" | "reply" | "confirm-claim">(null);
   const [approvalMsg, setApprovalMsg] = useState("");
   const [rejectFields, setRejectFields] = useState<string[]>([]);
   const [rejectOther, setRejectOther] = useState(false);
   const [blockReapply, setBlockReapply] = useState(false);
   const [rejectNotes, setRejectNotes] = useState("");
   const [replyMsg, setReplyMsg] = useState("");
+  const [claimCodeInput, setClaimCodeInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   function showToast(msg: string) {
@@ -130,6 +137,22 @@ function AdminApplicationsTable() {
       });
       return next;
     });
+    const appIds = (appsData || []).map((a: any) => a.id);
+    if (appIds.length > 0) {
+      const { data: grievanceData } = await supabase
+        .from("grievances")
+        .select("id, application_id, status, created_at")
+        .in("application_id", appIds)
+        .neq("status", "resolved")
+        .order("created_at", { ascending: false });
+      const map = new Map<string, string>();
+      (grievanceData || []).forEach((g: any) => {
+        if (!map.has(g.application_id)) map.set(g.application_id, g.id);
+      });
+      setDisputedIds(map);
+    } else {
+      setDisputedIds(new Map());
+    }
     setLoading(false);
   }
 
@@ -140,13 +163,21 @@ function AdminApplicationsTable() {
   }, [eventId]);
 
   function openApprove(app: any) {
+    const isDigital = app.ewallet_type === "GCash" || app.ewallet_type === "Maya";
+    setActiveRow(app);
+    if (isDigital) {
+      setApprovalMsg(
+        `Your application for ${ev?.program_name} has been approved. Since you chose ${app.ewallet_type}, you don't need to visit the venue \u2014 your \u20b1${ev?.program_amount || ""} subsidy will be sent to your ${app.ewallet_type} account, and we'll notify you here once it's sent.`,
+      );
+      setMode("approve");
+      return;
+    }
     const batchId = batchSelect[app.id];
     const batch = batches.find((b) => b.id === batchId);
     if (!batch) {
       showToast("Select a batch for this driver first.");
       return;
     }
-    setActiveRow(app);
     setApprovalMsg(
       `Your application for ${ev?.program_name} has been approved. You are assigned to ${batch.label} (${batch.time_start}\u2013${batch.time_end}). Please proceed to ${ev?.venue} on ${ev?.event_date} and bring your Driver's License and reference code.`,
     );
@@ -175,6 +206,35 @@ function AdminApplicationsTable() {
 
   async function confirmApprove() {
     if (!activeRow) return;
+    const isDigital = activeRow.ewallet_type === "GCash" || activeRow.ewallet_type === "Maya";
+
+    if (isDigital) {
+      setSubmitting(true);
+      await supabase
+        .from("application_messages")
+        .insert({ application_id: activeRow.id, message: approvalMsg, sent_by: "admin" });
+      await supabase
+        .from("applications")
+        .update({
+          status: "approved",
+          admin_message: approvalMsg,
+          batch_id: null,
+          batch_label: null,
+          batch_time_start: null,
+          batch_time_end: null,
+          driver_seen_latest: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", activeRow.id);
+      setSubmitting(false);
+      showToast(
+        'Approved. No venue visit needed \u2014 use "Mark as Sent" once the payout goes out.',
+      );
+      closeModal();
+      load();
+      return;
+    }
+
     const batchId = batchSelect[activeRow.id];
     const batch = batches.find((b) => b.id === batchId);
     if (!batch) {
@@ -263,7 +323,89 @@ function AdminApplicationsTable() {
     load();
   }
 
+  async function markAsSent(a: any) {
+    setSubmitting(true);
+    const method = a.ewallet_type || "GCash";
+    const msg = `Your ₱${ev?.program_amount || ""} subsidy for ${ev?.program_name} has been sent to your ${method}. Please confirm in the app once you've received it.`;
+    await supabase
+      .from("applications")
+      .update({
+        claim_status: "sent",
+        disbursed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", a.id);
+    await supabase
+      .from("application_messages")
+      .insert({ application_id: a.id, message: msg, sent_by: "admin" });
+    setSubmitting(false);
+    showToast(`Marked as sent via ${method}. Driver has been notified.`);
+    load();
+  }
+
+  async function retrySend(a: any) {
+    setSubmitting(true);
+    const method = a.ewallet_type || "GCash";
+    const msg = `We've re-sent your ₱${ev?.program_amount || ""} subsidy for ${ev?.program_name} to your ${method}. Please check and confirm in the app once you've received it.`;
+    await supabase
+      .from("applications")
+      .update({
+        claim_status: "sent",
+        disbursed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", a.id);
+    await supabase
+      .from("application_messages")
+      .insert({ application_id: a.id, message: msg, sent_by: "admin" });
+    setSubmitting(false);
+    showToast(`Marked as re-sent via ${method}. Driver has been notified again.`);
+    load();
+  }
+
+  function openConfirmClaim(a: any) {
+    setActiveRow(a);
+    setClaimCodeInput("");
+    setMode("confirm-claim");
+  }
+
+  async function confirmClaimCode() {
+    if (!activeRow) return;
+    setSubmitting(true);
+    const { data: appt } = await supabase
+      .from("appointments")
+      .select("reference_code")
+      .eq("application_id", activeRow.id)
+      .single();
+    if (!appt || appt.reference_code !== claimCodeInput.trim()) {
+      setSubmitting(false);
+      showToast("Reference code doesn't match this driver's appointment.");
+      return;
+    }
+    await supabase
+      .from("applications")
+      .update({
+        claim_status: "confirmed",
+        disbursed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", activeRow.id);
+    setSubmitting(false);
+    showToast("Cash claim confirmed.");
+    closeModal();
+    load();
+  }
+
   const pendingCount = useMemo(() => apps.filter((a) => a.status === "pending").length, [apps]);
+
+  const visibleApps = useMemo(() => {
+    let list = apps;
+    if (statusTab !== "all") list = list.filter((a) => a.status === statusTab);
+    if (statusTab === "approved" && methodFilter !== "all") {
+      list = list.filter((a) => (a.ewallet_type || "Cash") === methodFilter);
+    }
+    return list;
+  }, [apps, statusTab, methodFilter]);
 
   if (loading) {
     return (
@@ -301,9 +443,50 @@ function AdminApplicationsTable() {
         />
 
         <div className="px-3 pb-16 pt-4 md:px-6">
-          {apps.length === 0 ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {(
+              [
+                { key: "all", label: "All" },
+                { key: "pending", label: "Pending" },
+                { key: "approved", label: "Approved" },
+                { key: "rejected", label: "Rejected" },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setStatusTab(t.key)}
+                className={`rounded-full px-4 py-2 text-[12px] font-bold transition-all ${
+                  statusTab === t.key
+                    ? "bg-[#1b2b4b] text-white"
+                    : "bg-white text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                {t.label}
+                {t.key === "pending" && pendingCount > 0 && ` (${pendingCount})`}
+              </button>
+            ))}
+            {statusTab === "approved" && (
+              <div className="ml-2 flex items-center gap-1.5 border-l border-gray-200 pl-3">
+                <span className="text-[10px] font-bold uppercase text-gray-400">Method:</span>
+                {(["all", "Cash", "GCash", "Maya"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMethodFilter(m)}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${
+                      methodFilter === m
+                        ? "bg-[#f5a623] text-[#1b2b4b]"
+                        : "bg-white text-gray-500 hover:bg-gray-100"
+                    }`}
+                  >
+                    {m === "all" ? "All" : m}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {visibleApps.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-white p-10 text-center text-[#8c8b88]">
-              No applicants yet.
+              {apps.length === 0 ? "No applicants yet." : "No applicants match this filter."}
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
@@ -319,19 +502,21 @@ function AdminApplicationsTable() {
                       </th>
                     ))}
                     <th className="whitespace-nowrap p-3">Status</th>
+                    <th className="whitespace-nowrap p-3">Claim</th>
                     <th className="whitespace-nowrap p-3">Applied At</th>
                     <th className="whitespace-nowrap p-3">Batch</th>
                     <th className="whitespace-nowrap p-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {apps.map((a) => {
+                  {visibleApps.map((a) => {
                     const badgeCls =
                       a.status === "pending"
                         ? "bg-amber-50 text-amber-600"
                         : a.status === "approved" || a.status === "claimed"
                           ? "bg-emerald-50 text-emerald-600"
                           : "bg-red-50 text-red-600";
+                    const isDisputed = disputedIds.has(a.id);
                     return (
                       <tr
                         key={a.id}
@@ -346,17 +531,86 @@ function AdminApplicationsTable() {
                           </td>
                         ))}
                         <td className="whitespace-nowrap p-3">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${badgeCls}`}
-                          >
-                            {a.status}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${badgeCls}`}
+                            >
+                              {a.status}
+                            </span>
+                            {isDisputed && (
+                              <button
+                                onClick={() =>
+                                  navigate({
+                                    to: "/admin/support",
+                                    search: { grievanceId: disputedIds.get(a.id) },
+                                  })
+                                }
+                                className="inline-flex w-fit items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold uppercase text-red-600 hover:bg-red-200"
+                              >
+                                ⚠️ Disputed — Open Chat
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap p-3">
+                          {a.status !== "approved" ? (
+                            <span className="text-[11px] text-gray-300">—</span>
+                          ) : (a.ewallet_type || "Cash") === "Cash" ? (
+                            a.claim_status === "confirmed" ? (
+                              <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600">
+                                Claimed
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => openConfirmClaim(a)}
+                                className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100"
+                              >
+                                Confirm Claim
+                              </button>
+                            )
+                          ) : a.claim_status === "confirmed" ? (
+                            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600">
+                              Received
+                            </span>
+                          ) : a.claim_status === "sent" ? (
+                            isDisputed ? (
+                              <div className="flex flex-col items-start gap-1">
+                                <span className="inline-flex flex-col rounded-full bg-red-50 px-2 py-1 text-[9px] font-bold uppercase leading-tight text-red-600">
+                                  Driver has not claimed subsidy yet
+                                  <span className="normal-case">Hindi pa naa-claim ng driver</span>
+                                </span>
+                                <button
+                                  onClick={() => retrySend(a)}
+                                  disabled={submitting}
+                                  className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100 disabled:opacity-50"
+                                >
+                                  Retry Send
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase text-amber-600">
+                                Awaiting confirmation
+                              </span>
+                            )
+                          ) : (
+                            <button
+                              onClick={() => markAsSent(a)}
+                              disabled={submitting}
+                              className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100 disabled:opacity-50"
+                            >
+                              Mark as Sent
+                            </button>
+                          )}
                         </td>
                         <td className="whitespace-nowrap p-3 text-gray-500">
                           {new Date(a.applied_at).toLocaleDateString()}
                         </td>
                         <td className="whitespace-nowrap p-3">
-                          {a.status === "pending" ? (
+                          {a.ewallet_type === "GCash" || a.ewallet_type === "Maya" ? (
+                            <span className="text-[11px] italic text-gray-400">
+                              Not needed ({a.ewallet_type})
+                            </span>
+                          ) : a.status === "pending" ? (
                             <select
                               value={batchSelect[a.id] || ""}
                               onChange={(e) =>
@@ -571,6 +825,39 @@ function AdminApplicationsTable() {
                     className="flex-1 rounded-xl bg-red-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
                   >
                     {submitting ? "..." : "Confirm Reject"}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    className="flex-1 rounded-xl border border-gray-200 py-2.5 text-[13px] font-bold text-[#1b2b4b]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mode === "confirm-claim" && (
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <p className="mb-2 text-[13px] font-bold text-[#1b2b4b]">
+                  Confirm cash claim for {activeRow?.drivers?.full_name}:
+                </p>
+                <p className="mb-2 text-[11px] text-[#8c8b88]">
+                  Scan or type the reference code shown on the driver's Access QR to confirm they've
+                  claimed their cash payout in person.
+                </p>
+                <input
+                  value={claimCodeInput}
+                  onChange={(e) => setClaimCodeInput(e.target.value)}
+                  placeholder="REF-XXXXXXXX"
+                  className="w-full rounded-xl border border-gray-100 bg-white p-3 text-[12px] uppercase tracking-wide outline-none focus:border-[#f5a623]"
+                />
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={confirmClaimCode}
+                    disabled={submitting || !claimCodeInput.trim()}
+                    className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
+                  >
+                    {submitting ? "..." : "Confirm Claim"}
                   </button>
                   <button
                     onClick={closeModal}

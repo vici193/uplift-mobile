@@ -211,7 +211,7 @@ function HelpPage() {
             draft_message: value,
             is_draft: true,
             status: "draft",
-            is_grievance: category?.key === "grievance",
+            is_grievance: category?.key === "grievance" || category?.key === "not_received",
           })
           .select()
           .single();
@@ -239,7 +239,7 @@ function HelpPage() {
         message: escalateMessage,
         is_draft: false,
         status: "submitted",
-        is_grievance: category?.key === "grievance",
+        is_grievance: category?.key === "grievance" || category?.key === "not_received",
       });
     }
     setEscalateMessage("");
@@ -251,6 +251,21 @@ function HelpPage() {
 
   const categories = selectedApp
     ? [
+        ...(selectedApp?.status === "approved" &&
+        (selectedApp?.ewallet_type === "GCash" || selectedApp?.ewallet_type === "Maya") &&
+        selectedApp?.claim_status !== "confirmed" &&
+        (selectedApp?.claim_status === "sent" ||
+          (selectedApp?.payout_events?.event_date &&
+            new Date(selectedApp.payout_events.event_date) < new Date()))
+          ? [
+              {
+                key: "not_received",
+                label: en
+                  ? "I haven't received my subsidy"
+                  : "Hindi ko pa natanggap ang aking subsidy",
+              },
+            ]
+          : []),
         {
           key: "timing",
           label: en
@@ -589,7 +604,7 @@ function HelpPage() {
             )}
           >
             {categories
-              .filter((c) => c.key !== "grievance")
+              .filter((c) => c.key !== "grievance" && c.key !== "not_received")
               .map((c) => (
                 <button
                   key={c.key}
@@ -613,6 +628,33 @@ function HelpPage() {
               "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
             )}
           </div>
+
+          {categories.some((c) => c.key === "not_received") && (
+            <div className="relative">
+              {categories
+                .filter((c) => c.key === "not_received")
+                .map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={() => {
+                      setCategory(c);
+                      setSubQuestion({ key: "not_received_answer", label: c.label });
+                      const prefill = en
+                        ? `I have not received my ${selectedApp.ewallet_type} subsidy of \u20b1${selectedApp.payout_events?.program_amount || ""} for "${selectedApp.payout_events?.program_name}". Please check on the status of my disbursement.`
+                        : `Hindi ko pa natanggap ang aking ${selectedApp.ewallet_type} na subsidy na \u20b1${selectedApp.payout_events?.program_amount || ""} para sa "${selectedApp.payout_events?.program_name}". Pakitingnan po ang status ng aking disbursement.`;
+                      setEscalateMessage(prefill);
+                      loadConcerns(selectedApp.id, c.label);
+                    }}
+                    className="flex w-full items-center justify-between rounded-2xl border-l-4 border-red-400 bg-red-50 p-4 text-left"
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold text-red-600">
+                      <Flag className="h-4 w-4" /> {c.label}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-red-300" />
+                  </button>
+                ))}
+            </div>
+          )}
 
           {categories.some((c) => c.key === "grievance") && (
             <div

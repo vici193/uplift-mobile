@@ -1,106 +1,89 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, ShieldCheck, UserCheck, Sparkles } from "lucide-react";
+import { FileText, ShieldCheck, UserCheck } from "lucide-react";
 import logo from "@/assets/uplift-logo.png";
-import dotr from "@/assets/dotr.png";
-import ltfrb from "@/assets/ltfrb.png";
 import { MobileShell } from "@/components/mobile/MobileShell";
-import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+const features = [
+  { icon: FileText, label: "Apply" },
+  { icon: UserCheck, label: "Verify" },
+  { icon: ShieldCheck, label: "Subsidy" },
+];
+
 function Landing() {
-  const { en } = useSession();
-
-  const features = [
-    { icon: FileText, label: en ? "Apply" : "Mag-apply" },
-    { icon: UserCheck, label: en ? "Verify" : "I-verify" },
-    { icon: ShieldCheck, label: en ? "Subsidy" : "Subsidy" },
-  ];
-
   return (
-    <MobileShell className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-50 px-6 py-8 text-[#1b2b4b]">
-      {/* Toned down the background glows for a softer look */}
-      <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-[#f5a623] opacity-[0.08] blur-[100px]" />
-      <div className="pointer-events-none absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-[#1b2b4b] opacity-[0.04] blur-[120px]" />
+    <MobileShell className="relative flex min-h-screen flex-col items-center justify-between bg-white px-6 py-10 text-[#1b2b4b] overflow-hidden">
+      <div className="absolute inset-0 z-0 opacity-40">
+        <div className="absolute -top-[20%] -left-[20%] h-[500px] w-[500px] rounded-full bg-[#f5a623] blur-[150px] animate-pulse" />
+        <div className="absolute top-[40%] -right-[20%] h-[400px] w-[400px] rounded-full bg-[#1b2b4b] blur-[120px]" />
+      </div>
 
-      <div className="relative z-10 flex w-full flex-col items-center">
-        <div className="relative mb-4">
-          <img
-            src={logo}
-            alt="UPLIFT Logo"
-            className="h-48 w-48 object-contain drop-shadow-[0_0_15px_rgba(245,166,35,0.2)]"
-          />
-          <Sparkles className="absolute -right-2 top-0 h-6 w-6 animate-pulse text-[#f5a623]" />
-        </div>
-
-        <h1 className="text-6xl font-extrabold tracking-tight text-[#1b2b4b]">
-          PA<span className="text-[#f5a623]">RA</span>
+      <div className="relative z-10 flex w-full flex-col items-center pt-8">
+        <h1 className="text-7xl font-extrabold tracking-tighter">
+          <span className="bg-clip-text text-transparent bg-gradient-to-b from-[#1b2b4b] to-[#2e4a85]">
+            SU
+          </span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-b from-[#ffd54f] via-[#f5a623] to-[#c17a1a]">
+            BI
+          </span>
         </h1>
-
-        <p className="mt-4 max-w-[280px] text-center text-[13px] font-medium leading-relaxed text-[#1b2b4b]/80">
-          {en
-            ? "Fast-Track Your Benefits: PARA Dito, PARA sa Drayber."
-            : "Mabilis na Benepisyo: PARA Dito, PARA sa Drayber"}
+        <p className="mt-2 max-w-[320px] text-center text-xs font-bold uppercase tracking-[0.3em] bg-clip-text text-transparent bg-gradient-to-r from-[#c17a1a] via-[#f5a623] to-[#c17a1a]">
+          Sulong sa Biyahe
         </p>
 
-        <div className="mt-8 flex w-full justify-center gap-3">
+        <div className="my-6 w-full flex justify-center">
+          <img src={logo} alt="PARA Logo" className="h-64 w-64 object-contain drop-shadow-2xl" />
+        </div>
+
+        <div className="flex w-full justify-center gap-3">
           {features.map(({ icon: Icon, label }) => (
             <div
               key={label}
-              className="flex h-[90px] w-[90px] cursor-default select-none flex-col items-center justify-center gap-2.5 rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-[#f5a623] hover:bg-[#f5a623]/5 hover:shadow-[0_0_20px_rgba(245,166,35,0.15)] active:scale-95"
+              className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border border-white/20 bg-white/60 backdrop-blur-md transition-all hover:border-[#f5a623] hover:bg-amber-50 hover:shadow-lg active:scale-95"
             >
-              <Icon className="h-6 w-6 text-[#f5a623]" strokeWidth={2} />
-              <span className="text-xs font-semibold text-[#1b2b4b]">{label}</span>
+              <Icon className="h-6 w-6 text-[#1b2b4b]" strokeWidth={2} />
+              <span className="text-xs font-bold text-[#1b2b4b]">{label}</span>
             </div>
           ))}
         </div>
-
-        <div className="mt-8 flex flex-col items-center">
-          <div className="mt-4 flex items-center justify-center gap-6">
-            <img
-              src={ltfrb}
-              alt="LTFRB"
-              className="h-10 w-auto object-contain transition-transform hover:scale-110 opacity-90"
-            />
-            <img
-              src={dotr}
-              alt="DOTr"
-              className="h-10 w-auto object-contain transition-transform hover:scale-110 opacity-90"
-            />
-          </div>
-        </div>
       </div>
 
-      <div className="relative z-10 mt-8 flex w-full flex-col gap-3">
+      <div className="relative z-10 flex w-full flex-col gap-3 mt-8 pb-6">
         <Link
           to="/signup"
-          className="flex w-full items-center justify-center rounded-full bg-[#f5a623] py-4 text-[15px] font-bold text-[#1b2b4b] shadow-[0_4px_20px_rgba(245,166,35,0.2)] transition-all hover:scale-[1.02] hover:shadow-[0_4px_25px_rgba(245,166,35,0.3)] active:scale-95"
+          className="flex w-full items-center justify-center rounded-full bg-[#1b2b4b] py-4 text-[15px] font-bold text-white transition-all hover:bg-[#253960] active:scale-95 border border-[#1b2b4b]"
         >
-          {en ? "Create an account" : "Gumawa ng Account"}
+          Create an account
         </Link>
 
         <Link
           to="/login"
-          className="flex w-full items-center justify-center rounded-full border border-slate-300 bg-white py-4 text-[15px] font-bold text-[#1b2b4b] shadow-sm transition-all hover:bg-slate-100 active:scale-95"
+          className="flex w-full items-center justify-center rounded-full border border-[#f5a623] bg-[#f5a623] py-4 text-[15px] font-bold text-[#1b2b4b] transition-all hover:bg-[#ffc107] active:scale-95"
         >
-          {en ? "I already have an account" : "Mayroon na akong account"}
+          I already have an account
         </Link>
 
         <Link
           to="/admin"
-          className="mt-1 flex w-full items-center justify-center rounded-full border border-dashed border-slate-300 bg-transparent py-3 text-[13px] font-medium text-slate-500 transition-all hover:border-slate-400 hover:bg-slate-100 active:scale-95"
+          className="flex w-full items-center justify-center rounded-full border border-dashed border-gray-300 py-4 text-[15px] font-bold text-gray-400 hover:border-[#f5a623] hover:text-[#f5a623] transition-all"
         >
-          {en ? "Admin login (demo)" : "Admin login (demo)"}
+          Admin login (demo)
         </Link>
 
-        <p className="mt-2 text-center text-xs text-slate-500">
-          {en ? "By continuing you agree to our" : "Sa pagpapatuloy, sumasang-ayon ka sa aming"}{" "}
-          <Link to="/terms" className="text-[#1b2b4b] underline underline-offset-2 transition-colors hover:text-[#f5a623]">
-            {en ? "Terms & Privacy" : "Mga Tuntunin at Privacy"}
-          </Link>
-        </p>
+        <div className="mt-6 flex justify-center">
+          <p className="text-center text-xs text-gray-400">
+            By continuing you agree to our{" "}
+            <Link
+              to="/terms"
+              className="text-[#1b2b4b] font-bold underline underline-offset-2 hover:text-[#f5a623]"
+            >
+              Terms & Privacy
+            </Link>
+          </p>
+        </div>
       </div>
     </MobileShell>
   );

@@ -1,6 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Phone, Loader2, AlertTriangle, ShieldAlert, HelpCircle, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import {
+  Phone,
+  Loader2,
+  AlertTriangle,
+  ShieldAlert,
+  HelpCircle,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+} from "lucide-react";
 import logo from "@/assets/uplift-logo.png";
 import { MobileShell } from "@/components/mobile/MobileShell";
 import { useSession } from "@/lib/session-context";
@@ -120,7 +129,9 @@ function LoginPage() {
   const renderTutorialCard = (stepNum: number, positionClasses: string) => {
     if (tutStep !== stepNum) return null;
     return (
-      <div className={`absolute z-[300] rounded-3xl border-2 border-[#f5a623] bg-[#1b2b4b] p-6 shadow-2xl ${positionClasses}`}>
+      <div
+        className={`absolute z-[300] rounded-3xl border-2 border-[#f5a623] bg-[#1b2b4b] p-6 shadow-2xl ${positionClasses}`}
+      >
         <div className="mb-4 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-[#1b2b4b]">
             {tutStep}/{steps.length}
@@ -179,13 +190,27 @@ function LoginPage() {
       {tutStep === 1 && (
         <div className="fixed bottom-38 left-14 sm:left-6 z-[300] w-[300px] sm:w-[320px] rounded-3xl border-2 border-[#f5a623] bg-[#1b2b4b] p-6 shadow-2xl">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-[#1b2b4b]">1/{steps.length}</div>
-            <h3 className="text-lg font-bold text-white">{en ? "Sign-In Guide" : "Gabay sa Pagpasok"}</h3>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-[#1b2b4b]">
+              1/{steps.length}
+            </div>
+            <h3 className="text-lg font-bold text-white">
+              {en ? "Sign-In Guide" : "Gabay sa Pagpasok"}
+            </h3>
           </div>
           <p className="mb-6 text-sm text-white/80">{steps[0].text}</p>
           <div className="flex gap-3">
-            <button onClick={() => setTutStep(0)} className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10">{en ? "Skip" : "Laktawan"}</button>
-            <button onClick={() => setTutStep(2)} className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95">{en ? "Next" : "Susunod"}</button>
+            <button
+              onClick={() => setTutStep(0)}
+              className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+            >
+              {en ? "Skip" : "Laktawan"}
+            </button>
+            <button
+              onClick={() => setTutStep(2)}
+              className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
+            >
+              {en ? "Next" : "Susunod"}
+            </button>
           </div>
         </div>
       )}
@@ -194,14 +219,21 @@ function LoginPage() {
         <div className="mx-auto flex h-28 w-28 items-center justify-center">
           <img
             src={logo}
-            alt="UPLIFT"
+            alt="SUBI"
             className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(245,166,35,0.2)]"
           />
         </div>
 
-        <h1 className="mt-4 text-center text-3xl font-bold text-[#1b2b4b]">
-          {en ? "Welcome back to" : "Maligayang pagbabalik sa"}{" "}
-          <span className="text-[#f5a623]">PARA!</span>
+        <h1 className="mt-4 text-center text-3xl font-bold">
+          <span className="text-[#1b2b4b]">
+            {en ? "Welcome back to" : "Maligayang pagbabalik sa"}{" "}
+          </span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-b from-[#1b2b4b] to-[#2e4a85]">
+            SU
+          </span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-b from-[#ffd54f] via-[#f5a623] to-[#c17a1a]">
+            BI!
+          </span>
         </h1>
         <p className="mt-2 text-center text-[13px] font-medium text-slate-500">
           {en
@@ -220,7 +252,7 @@ function LoginPage() {
           id="tut-step-2"
           className={cn(
             "mt-10 flex flex-col gap-4 rounded-2xl transition-all",
-            tutStep === 2 ? "relative z-[250] bg-white p-4 shadow-2xl ring-4 ring-[#f5a623]" : ""
+            tutStep === 2 ? "relative z-[250] bg-white p-4 shadow-2xl ring-4 ring-[#f5a623]" : "",
           )}
         >
           <label className="flex flex-col gap-1.5">
@@ -289,7 +321,9 @@ function LoginPage() {
           id="tut-step-4"
           className={cn(
             "mt-8 flex justify-between rounded-2xl text-[13px] font-semibold transition-all",
-            tutStep === 4 ? "relative z-[250] bg-white px-4 py-3 shadow-2xl ring-4 ring-[#f5a623]" : "px-2"
+            tutStep === 4
+              ? "relative z-[250] bg-white px-4 py-3 shadow-2xl ring-4 ring-[#f5a623]"
+              : "px-2",
           )}
         >
           <Link
@@ -304,7 +338,10 @@ function LoginPage() {
           >
             {en ? "Changed your number?" : "Nagpalit ng numero?"}
           </Link>
-          {renderTutorialCard(4, "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]")}
+          {renderTutorialCard(
+            4,
+            "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+          )}
         </div>
 
         <div className="relative z-10 mt-8 flex items-start gap-3 rounded-2xl border border-[#f5a623]/30 bg-[#f5a623]/10 p-4 text-[12px] leading-relaxed text-[#1b2b4b] shadow-sm">
@@ -314,8 +351,8 @@ function LoginPage() {
               {en ? "Security Note:" : "Paalala sa Kaligtasan:"}
             </strong>{" "}
             {en
-              ? "PARA will never ask for your password or OTP over calls or SMS."
-              : "Hindi kailanman hihingiin ng PARA ang iyong password o kodigo sa pamamagitan ng tawag o mensahe."}
+              ? "SUBI will never ask for your password or OTP over calls or SMS."
+              : "Hindi kailanman hihingiin ng SUBI ang iyong password o kodigo sa pamamagitan ng tawag o mensahe."}
           </p>
         </div>
 
@@ -323,7 +360,9 @@ function LoginPage() {
           id="tut-step-3"
           className={cn(
             "mt-8 text-center text-sm font-medium transition-all",
-            tutStep === 3 ? "relative z-[250] rounded-2xl bg-white p-3 shadow-2xl ring-4 ring-[#f5a623] text-[#1b2b4b]" : "text-slate-500"
+            tutStep === 3
+              ? "relative z-[250] rounded-2xl bg-white p-3 shadow-2xl ring-4 ring-[#f5a623] text-[#1b2b4b]"
+              : "text-slate-500",
           )}
         >
           {en ? "No account yet?" : "Wala ka pang rehistro?"}{" "}
@@ -333,7 +372,10 @@ function LoginPage() {
           >
             {en ? "Sign up" : "Magrehistro"}
           </Link>
-          {renderTutorialCard(3, "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]")}
+          {renderTutorialCard(
+            3,
+            "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+          )}
         </div>
       </div>
     </MobileShell>
