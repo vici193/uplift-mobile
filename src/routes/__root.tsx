@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "../lib/session-context";
+import { OnboardingOutroModal } from "../components/mobile/OnboardingOutroModal.tsx";
 import {
   Outlet,
   Link,
@@ -82,15 +83,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "UPLIFT" },
       {
         name: "description",
-        content:
-          "Secure verification and direct subsidy applications for Filipino PUV drivers.",
+        content: "Secure verification and direct subsidy applications for Filipino PUV drivers.",
       },
       { name: "author", content: "UPLIFT" },
       { property: "og:title", content: "UPLIFT — Fast-Track Your Benefits" },
       {
         property: "og:description",
-        content:
-          "Secure verification and direct subsidy applications for Filipino PUV drivers.",
+        content: "Secure verification and direct subsidy applications for Filipino PUV drivers.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -117,14 +116,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-    <head>
-      <title>UPLIFT</title>
-      <HeadContent />
-    </head>
-    <body>
-    {children}
-    <Scripts />
-    </body>
+      <head>
+        <title>UPLIFT</title>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }
@@ -137,6 +136,7 @@ function RootComponent() {
       <SessionProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
+        <OnboardingOutroModal />
       </SessionProvider>
     </QueryClientProvider>
   );

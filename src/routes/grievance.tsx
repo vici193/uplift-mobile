@@ -53,16 +53,16 @@ function getLandingTutSteps(en: boolean, showNewForm: boolean, hasGrievances: bo
     steps.push({
       title: en ? "Grievance Form" : "Pormularyo ng Reklamo",
       desc: en
-        ? "Select the rejected application, choose a topic, and write your message clearly so the agency can review your case."
-        : "Piliin ang tinanggihang aplikasyon, pumili ng paksa, at isulat nang malinaw ang iyong mensahe upang masuri ng ahensya ang iyong kaso.",
+        ? "This is the Grievance page. Select the rejected application, choose a topic, and write your message clearly so the agency can review your case."
+        : "Ito ang Grievance page. Piliin ang tinanggihang aplikasyon, pumili ng paksa, at isulat nang malinaw ang iyong mensahe upang masuri ng ahensya ang iyong kaso.",
       target: "tut-grievance-form",
     });
   } else {
     steps.push({
       title: en ? "File a Grievance" : "Maghain ng Reklamo",
       desc: en
-        ? "Tap here to start filing a new formal grievance against a rejected application."
-        : "I-tap dito upang magsimulang maghain ng bagong pormal na reklamo laban sa tinanggihang aplikasyon.",
+        ? "This is the Grievance page. Tap here to start filing a new formal grievance against a rejected application."
+        : "Ito ang Grievance page. I-tap dito upang magsimulang maghain ng bagong pormal na reklamo laban sa tinanggihang aplikasyon.",
       target: "tut-new-grievance-btn",
     });
   }
@@ -72,7 +72,16 @@ function getLandingTutSteps(en: boolean, showNewForm: boolean, hasGrievances: bo
 
 function GrievancesLandingPage() {
   const navigate = useNavigate();
-  const { en, apps, concerns, driverId, refreshConcerns } = useSession();
+  const {
+    en,
+    apps,
+    concerns,
+    driverId,
+    refreshConcerns,
+    onboardingTourActive,
+    advanceOnboardingTour,
+    endOnboardingTour,
+  } = useSession();
 
   const [showNewForm, setShowNewForm] = useState(false);
   const [appId, setAppId] = useState<string | null>(null);
@@ -82,6 +91,11 @@ function GrievancesLandingPage() {
   const [autoSaveTimer, setAutoSaveTimer] = useState<any>(null);
 
   const [tutStep, setTutStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutStep === 0) setTutStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
 
   const grievances = concerns.filter((c: any) => c.is_grievance);
   const rejectedApps = apps.filter((a: any) => a.status === "rejected");
@@ -139,6 +153,7 @@ function GrievancesLandingPage() {
             onClick={(e) => {
               e.preventDefault();
               setTutStep(0);
+              if (onboardingTourActive) endOnboardingTour();
             }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
@@ -148,7 +163,10 @@ function GrievancesLandingPage() {
             onClick={(e) => {
               e.preventDefault();
               if (tutStep < steps.length) setTutStep((s) => s + 1);
-              else setTutStep(0);
+              else {
+                setTutStep(0);
+                if (onboardingTourActive) advanceOnboardingTour();
+              }
             }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >

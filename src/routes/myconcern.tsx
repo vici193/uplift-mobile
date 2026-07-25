@@ -17,8 +17,8 @@ const getTutSteps = (en: boolean) => [
   {
     title: en ? "Your Concerns" : "Iyong mga Alalahanin",
     desc: en
-      ? "This is where all your concerns and grievances live, grouped by subsidy. Tap any entry to see the full conversation and any reply from the agency."
-      : "Dito makikita ang lahat ng iyong alalahanin, hinati-hati ayon sa subsidy. I-tap ang alinman para makita ang buong usapan.",
+      ? "This is the My Concerns page. This is where all your concerns and grievances live, grouped by subsidy. Tap any entry to see the full conversation and any reply from the agency."
+      : "Ito ang My Concerns page. Dito makikita ang lahat ng iyong alalahanin, hinati-hati ayon sa subsidy. I-tap ang alinman para makita ang buong usapan.",
     target: "tut-concern-list",
   },
   {
@@ -95,8 +95,22 @@ function statusBadge(c: any, en: boolean) {
 
 function MyConcernsPage() {
   const navigate = useNavigate();
-  const { en, apps, concerns, driverId, refreshConcerns } = useSession();
+  const {
+    en,
+    apps,
+    concerns,
+    driverId,
+    refreshConcerns,
+    onboardingTourActive,
+    advanceOnboardingTour,
+    endOnboardingTour,
+  } = useSession();
   const [tutStep, setTutStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutStep === 0) setTutStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
   const steps = getTutSteps(en);
 
   useEffect(() => {
@@ -159,6 +173,7 @@ function MyConcernsPage() {
             onClick={(e) => {
               e.preventDefault();
               setTutStep(0);
+              if (onboardingTourActive) endOnboardingTour();
             }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
@@ -168,7 +183,10 @@ function MyConcernsPage() {
             onClick={(e) => {
               e.preventDefault();
               if (tutStep < steps.length) setTutStep((s) => s + 1);
-              else setTutStep(0);
+              else {
+                setTutStep(0);
+                if (onboardingTourActive) advanceOnboardingTour();
+              }
             }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >

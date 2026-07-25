@@ -48,7 +48,8 @@ function statusMeta(status: string, en: boolean) {
 
 function ApplyBrowsePage() {
   const navigate = useNavigate();
-  const { en, driver, driverId } = useSession();
+  const { en, driver, driverId, onboardingTourActive, advanceOnboardingTour, endOnboardingTour } =
+    useSession();
 
   const [events, setEvents] = useState<any[]>([]);
   const [existing, setExisting] = useState<Record<string, string>>({});
@@ -63,6 +64,11 @@ function ApplyBrowsePage() {
     }
   });
   const [tutStep, setTutStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutStep === 0) setTutStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
   const steps = tutSteps(en);
 
   function toggleArchive(eventId: string) {
@@ -140,13 +146,23 @@ function ApplyBrowsePage() {
         <p className="mb-6 text-sm text-white/80">{steps[tutStep - 1]}</p>
         <div className="flex gap-3">
           <button
-            onClick={() => setTutStep(0)}
+            onClick={() => {
+              setTutStep(0);
+              if (onboardingTourActive) endOnboardingTour();
+            }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
             {en ? "Skip" : "Laktawan"}
           </button>
           <button
-            onClick={() => (tutStep < steps.length ? setTutStep((s) => s + 1) : setTutStep(0))}
+            onClick={() => {
+              if (tutStep < steps.length) {
+                setTutStep((s) => s + 1);
+              } else {
+                setTutStep(0);
+                if (onboardingTourActive) advanceOnboardingTour();
+              }
+            }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >
             {tutStep === steps.length ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
@@ -190,9 +206,7 @@ function ApplyBrowsePage() {
         }
       />
 
-      {tutStep > 0 && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]" />
-      )}
+      {tutStep > 0 && <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]" />}
 
       <div className="flex flex-col gap-4 px-5 pb-24 pt-4">
         {loading ? (
@@ -262,7 +276,8 @@ function ApplyBrowsePage() {
                     </div>
                   )}
 
-                  {i === 0 && renderTutorialCard(2, "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px]")}
+                  {i === 0 &&
+                    renderTutorialCard(2, "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px]")}
                 </div>
 
                 <div className="mt-4 flex items-center justify-between">
@@ -304,11 +319,13 @@ function ApplyBrowsePage() {
                       </button>
                     )}
 
-                    {i === 0 && renderTutorialCard(3, "top-full right-0 mt-4 w-[280px] sm:w-[300px]")}
+                    {i === 0 &&
+                      renderTutorialCard(3, "top-full right-0 mt-4 w-[280px] sm:w-[300px]")}
                   </div>
                 </div>
 
-                {i === 0 && renderTutorialCard(1, "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px]")}
+                {i === 0 &&
+                  renderTutorialCard(1, "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px]")}
               </div>
             );
           })

@@ -43,8 +43,8 @@ const getTutSteps = (en: boolean) => [
   {
     title: en ? "Personal Details" : "Personal na Impormasyon",
     desc: en
-      ? "Ensure your Personal Information matches your Driver's License exactly."
-      : "Siguraduhing eksaktong tugma ang Personal na Impormasyon sa iyong Driver's License.",
+      ? "This is your Profile page. Ensure your Personal Information matches your Driver's License exactly."
+      : "Ito ang iyong Profile page. Siguraduhing eksaktong tugma ang Personal na Impormasyon sa iyong Driver's License.",
     target: "tut-personal",
   },
   {
@@ -74,8 +74,21 @@ const selectCls = inputCls;
 
 function EditProfilePage() {
   const navigate = useNavigate();
-  const { en, driver, driverId, loadDriverData } = useSession();
+  const {
+    en,
+    driver,
+    driverId,
+    loadDriverData,
+    onboardingTourActive,
+    advanceOnboardingTour,
+    endOnboardingTour,
+  } = useSession();
   const [tutStep, setTutStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutStep === 0) setTutStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
   const steps = getTutSteps(en);
 
   const [loading, setLoading] = useState(false);
@@ -144,6 +157,7 @@ function EditProfilePage() {
             onClick={(e) => {
               e.preventDefault();
               setTutStep(0);
+              if (onboardingTourActive) endOnboardingTour();
             }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
@@ -153,7 +167,10 @@ function EditProfilePage() {
             onClick={(e) => {
               e.preventDefault();
               if (tutStep < steps.length) setTutStep((s) => s + 1);
-              else setTutStep(0);
+              else {
+                setTutStep(0);
+                if (onboardingTourActive) advanceOnboardingTour();
+              }
             }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >

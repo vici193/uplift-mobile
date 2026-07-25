@@ -70,8 +70,8 @@ function getTutSteps(en: boolean, selectedApp: any) {
       {
         title: en ? "My Concerns" : "Aking mga Alalahanin",
         desc: en
-          ? "Already sent a concern before? Tap here to see all your past questions and their replies in one place."
-          : "May naipadala ka na bang alalahanin dati? Pindutin ito upang makita ang lahat ng iyong mga nakaraang tanong at tugon.",
+          ? "This is the Help Center. Already sent a concern before? Tap here to see all your past questions and their replies in one place."
+          : "Ito ang Sentro ng Tulong. May naipadala ka na bang alalahanin dati? Pindutin ito upang makita ang lahat ng iyong mga nakaraang tanong at tugon.",
         target: "tut-my-concerns",
       },
       {
@@ -117,7 +117,8 @@ function getTutSteps(en: boolean, selectedApp: any) {
 function HelpPage() {
   const navigate = useNavigate();
   const { appId } = Route.useSearch();
-  const { en, apps, driverId } = useSession();
+  const { en, apps, driverId, onboardingTourActive, advanceOnboardingTour, endOnboardingTour } =
+    useSession();
 
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [category, setCategory] = useState<any>(null);
@@ -131,6 +132,11 @@ function HelpPage() {
   const currentDraftIdRef = useRef<string | null>(null);
 
   const [tutStep, setTutStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutStep === 0) setTutStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
 
   // Arriving from a specific application's "Need help?" button skips straight to
   // that application's category screen, instead of forcing the app-picker again.
@@ -395,6 +401,7 @@ function HelpPage() {
             onClick={(e) => {
               e.preventDefault();
               setTutStep(0);
+              if (onboardingTourActive) endOnboardingTour();
             }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
@@ -404,7 +411,10 @@ function HelpPage() {
             onClick={(e) => {
               e.preventDefault();
               if (tutStep < steps.length) setTutStep((s) => s + 1);
-              else setTutStep(0);
+              else {
+                setTutStep(0);
+                if (onboardingTourActive) advanceOnboardingTour();
+              }
             }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >
@@ -502,9 +512,35 @@ function HelpPage() {
 
           <div className="relative flex flex-col gap-3">
             {apps.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-[#e6e8eb] p-10 text-center text-[#8c8b88]">
-                {en ? "You have no applications yet." : "Wala ka pang aplikasyon."}
-              </div>
+              tutStep > 0 ? (
+                <div className="relative">
+                  <div
+                    id="tut-app-list"
+                    className={cn(
+                      "w-full rounded-[24px] border p-4 text-left shadow-sm transition-all",
+                      isHighlighted("tut-app-list")
+                        ? "relative z-[250] border-[#f5a623] bg-white shadow-2xl ring-4 ring-[#f5a623]"
+                        : "border-[#f0f0f0] bg-white",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-extrabold text-[#1b2b4b]">
+                        {en ? "Sample Subsidy Application" : "Halimbawang Aplikasyon sa Subsidy"}
+                      </p>
+                      <ChevronRight className="h-4 w-4 text-[#c1c1c1]" />
+                    </div>
+                    <p className="text-[12px] text-[#8c8b88]">DOTr</p>
+                  </div>
+                  {renderTutorialCard(
+                    "tut-app-list",
+                    "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-2xl border-2 border-dashed border-[#e6e8eb] p-10 text-center text-[#8c8b88]">
+                  {en ? "You have no applications yet." : "Wala ka pang aplikasyon."}
+                </div>
+              )
             ) : (
               apps.map((a: any, i: number) =>
                 i === 0 ? (

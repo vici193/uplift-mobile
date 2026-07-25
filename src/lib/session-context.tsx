@@ -5,7 +5,30 @@
 // Type-checking is disabled here rather than fully annotating every state/param,
 // since the logic itself is already correct and tested — only its types are loose.
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "../supabase";
+
+// The ordered sequence of pages the first-run onboarding tour walks a brand-new
+// driver through. Each page already has its own tutorial (tutStep/tutorialStep +
+// renderTutorialCard) — this just chains them together automatically.
+// "/apply-detail" is special: it's not a standalone page, it's "the form for
+// applying to THIS specific event" — so it needs a real event id, resolved at
+// navigation time from whatever's currently open (see navigateToTourStep below).
+export const ONBOARDING_TOUR_PAGES = [
+  "/home",
+  "/subsidies",
+  "/apply",
+  "/apply-detail",
+  "/help",
+  "/grievance",
+  "/myconcern",
+  "/edit",
+];
+
+// Sentinel id recognized by apply-detail.tsx to render a fixed prototype event
+// instead of fetching from Supabase — so the /apply-detail tour step always
+// works the same way regardless of whatever real events happen to exist.
+export const ONBOARDING_TOUR_DEMO_EVENT_ID = "tour-demo-event";
 
 type SessionContextValue = ReturnType<typeof useSessionState>;
 
@@ -26,12 +49,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 // Logic is unchanged; only `page`/`navigate` state-machine bits are removed,
 // since real routing now handles navigation instead.
 function useSessionState() {
+  const navigate = useNavigate();
   const [lang, setLang] = useState("fil");
   const en = lang === "en";
 
   const [loggedIn, setLoggedIn] = useState(false);
   const [restoringSession, setRestoringSession] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
+
+  // First-run onboarding tour: chains together the existing per-page tutorials.
+  const [onboardingTourActive, setOnboardingTourActive] = useState(false);
+  const [onboardingTourIndex, setOnboardingTourIndex] = useState(0);
+  const [showOnboardingOutro, setShowOnboardingOutro] = useState(false);
 
   const [driver, setDriver] = useState<any>(null);
   const [driverId, setDriverId] = useState<any>(null);
@@ -213,6 +242,17 @@ function useSessionState() {
         ewallet_type: profile.ewallet_type,
         ewallet_number: profile.ewallet_number,
       });
+      if (profile.has_completed_onboarding_tour === false) {
+        setOnboardingTourActive(true);
+        setOnboardingTourIndex(0);
+        // Mark it seen immediately (not when the tour finishes) so a refresh or
+        // an early exit never causes the tour to re-trigger on a later login.
+        supabase
+          .from("drivers")
+          .update({ has_completed_onboarding_tour: true })
+          .eq("id", id)
+          .then(() => {});
+      }
     }
     setApps(appsData || []);
     setAllAppointments(apptData || []);
@@ -360,6 +400,47 @@ function useSessionState() {
     }
   }
 
+  // Navigates to a given step in the tour sequence. Every step is a plain path
+  // except /apply-detail, which always gets the demo sentinel id above.
+  function navigateToTourStep(index) {
+    const path = ONBOARDING_TOUR_PAGES[index];
+    if (path === "/apply-detail") {
+      navigate({ to: "/apply-detail", search: { eventId: ONBOARDING_TOUR_DEMO_EVENT_ID } });
+      return;
+    }
+    navigate({ to: path });
+  }
+
+  // Kicks off the tour by navigating to its first page once it's flagged active.
+  useEffect(() => {
+    if (onboardingTourActive && onboardingTourIndex === 0) {
+      navigateToTourStep(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
+
+  function advanceOnboardingTour() {
+    const next = onboardingTourIndex + 1;
+    if (next < ONBOARDING_TOUR_PAGES.length) {
+      setOnboardingTourIndex(next);
+      navigateToTourStep(next);
+    } else {
+      setOnboardingTourActive(false);
+      setOnboardingTourIndex(0);
+      setShowOnboardingOutro(true);
+    }
+  }
+
+  function endOnboardingTour() {
+    setOnboardingTourActive(false);
+    setOnboardingTourIndex(0);
+    setShowOnboardingOutro(false);
+  }
+
+  function closeOnboardingOutro() {
+    setShowOnboardingOutro(false);
+  }
+
   // On first mount, restore session from sessionStorage (equivalent to App.jsx's original useEffect)
   useEffect(() => {
     const saved = sessionStorage.getItem("uplift_session");
@@ -379,6 +460,11 @@ function useSessionState() {
     restoringSession,
     showTutorial,
     setShowTutorial,
+    onboardingTourActive,
+    advanceOnboardingTour,
+    endOnboardingTour,
+    showOnboardingOutro,
+    closeOnboardingOutro,
     driver,
     driverId,
     apps,

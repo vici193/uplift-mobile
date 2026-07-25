@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, HelpCircle, Loader2, Info } from "lucide-react";
 import { MobileShell } from "@/components/mobile/MobileShell";
-import { useSession } from "@/lib/session-context";
+import { useSession, ONBOARDING_TOUR_DEMO_EVENT_ID } from "@/lib/session-context";
 import { supabase } from "@/supabase";
 import {
   formatCaseNumber,
@@ -74,8 +74,8 @@ const denominations = [
 
 const tutSteps = (en: boolean) => [
   en
-    ? "Fill in your Personal Information exactly as it appears on your Driver's License."
-    : "Punan ang iyong Personal na Impormasyon nang eksaktong tugma sa iyong Driver's License.",
+    ? "This is the Application form. Fill in your Personal Information exactly as it appears on your Driver's License."
+    : "Ito ang form ng Aplikasyon. Punan ang iyong Personal na Impormasyon nang eksaktong tugma sa iyong Driver's License.",
   en
     ? "Your Address helps the agency confirm you're within the coverage area for this subsidy."
     : "Ang iyong Tirahan ay tumutulong sa ahensya na kumpirmahin kung nasa saklaw ka ng subsidy na ito.",
@@ -87,7 +87,15 @@ const tutSteps = (en: boolean) => [
 function ApplyDetailPage() {
   const navigate = useNavigate();
   const { eventId } = Route.useSearch();
-  const { en, driver, driverId, refreshApps } = useSession();
+  const {
+    en,
+    driver,
+    driverId,
+    refreshApps,
+    onboardingTourActive,
+    advanceOnboardingTour,
+    endOnboardingTour,
+  } = useSession();
 
   const [event, setEvent] = useState<any>(null);
   const allowedDisbursementMethods = getAllowedDisbursementMethods(event);
@@ -95,6 +103,11 @@ function ApplyDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [tutStep, setTutStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutStep === 0) setTutStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
   const steps = tutSteps(en);
   const [noMiddle, setNoMiddle] = useState(false);
   const [noExtension, setNoExtension] = useState(false);
@@ -220,6 +233,37 @@ function ApplyDetailPage() {
         setLoading(false);
         return;
       }
+      if (eventId === ONBOARDING_TOUR_DEMO_EVENT_ID) {
+        // Guided-tour step: use a fixed prototype event instead of a real
+        // Supabase row, so this step always works the same way regardless of
+        // what events actually exist at the moment someone signs up.
+        const demoEvent = {
+          id: ONBOARDING_TOUR_DEMO_EVENT_ID,
+          program_name: en
+            ? "Sample PUV Driver Cash Subsidy"
+            : "Halimbawang Cash Subsidy para sa Drayber ng PUV",
+          program_agency: "DOTr",
+          program_amount: "1000",
+          venue: en
+            ? "Sample City Hall, Sample City"
+            : "Halimbawang City Hall, Halimbawang Lungsod",
+          event_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          batches: [
+            { id: "demo_batch_1", label: "Batch 1", time_start: "08:00", time_end: "12:00" },
+          ],
+          time_start: "08:00:00",
+          time_end: "12:00:00",
+          application_deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+          description: en
+            ? "This is a sample subsidy so you can see how applying works. It's not a real event."
+            : "Ito ay isang halimbawang subsidy para makita mo kung paano gumagana ang pag-apply. Hindi ito totoong event.",
+          qualified_denominations: null,
+          disbursement_methods: "Cash, GCash, Maya",
+        };
+        setEvent(demoEvent);
+        setLoading(false);
+        return;
+      }
       const { data } = await supabase.from("payout_events").select("*").eq("id", eventId).single();
       setEvent(data);
       const methods = getAllowedDisbursementMethods(data);
@@ -247,6 +291,16 @@ function ApplyDetailPage() {
   async function submitApplication(e: any) {
     e.preventDefault();
     if (!event) return;
+    if (event.id === ONBOARDING_TOUR_DEMO_EVENT_ID) {
+      // Safety net: this is the guided-tour's fake prototype event, not a real
+      // one — there's nothing in Supabase to actually submit an application to.
+      alert(
+        en
+          ? "This is just a sample for the tour — nothing to submit here."
+          : "Ito ay halimbawa lang para sa tour — walang isusumite dito.",
+      );
+      return;
+    }
 
     // Run field validations
     const errs = validateForm();
@@ -345,6 +399,7 @@ function ApplyDetailPage() {
             onClick={(e) => {
               e.preventDefault();
               setTutStep(0);
+              if (onboardingTourActive) endOnboardingTour();
             }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
@@ -354,7 +409,10 @@ function ApplyDetailPage() {
             onClick={(e) => {
               e.preventDefault();
               if (tutStep < steps.length) setTutStep((s) => s + 1);
-              else setTutStep(0);
+              else {
+                setTutStep(0);
+                if (onboardingTourActive) advanceOnboardingTour();
+              }
             }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >

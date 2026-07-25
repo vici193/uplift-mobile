@@ -36,10 +36,10 @@ function getGreeting(en: boolean) {
 function tutorialSteps(en: boolean, showVerification: boolean) {
   const steps = [
     {
-      title: en ? "Welcome Area" : "Welcome Area",
+      title: en ? "Welcome to SUBI!" : "Maligayang pagdating sa SUBI!",
       desc: en
-        ? "Your profile status, name, and active subsidies."
-        : "Ang status ng iyong profile, pangalan, at mga aktibong subsidy.",
+        ? "Let's take a quick look around. This is your Home page — your profile status, name, and active subsidies show up here."
+        : "Tara, mabilisang tour lang. Ito ang iyong Home page — makikita rito ang status ng iyong profile, pangalan, at mga aktibong subsidy.",
       target: "welcome-area",
     },
   ];
@@ -87,8 +87,18 @@ function tutorialSteps(en: boolean, showVerification: boolean) {
 
 function HomePage() {
   const navigate = useNavigate();
-  const { en, driver, apps, showTutorial, setShowTutorial, refreshApps, handleUploadDocument } =
-    useSession();
+  const {
+    en,
+    driver,
+    apps,
+    showTutorial,
+    setShowTutorial,
+    refreshApps,
+    handleUploadDocument,
+    onboardingTourActive,
+    advanceOnboardingTour,
+    endOnboardingTour,
+  } = useSession();
   const [dashFiles, setDashFiles] = useState<FileList | null>(null);
   const [uploadingDash, setUploadingDash] = useState(false);
 
@@ -100,6 +110,11 @@ function HomePage() {
 
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [tutorialStep, setTutorialStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutorialStep === 0) setTutorialStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
 
   useEffect(() => {
     refreshApps();
@@ -163,6 +178,7 @@ function HomePage() {
               e.preventDefault();
               setTutorialStep(0);
               setShowTutorial(false);
+              if (onboardingTourActive) endOnboardingTour();
             }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
@@ -175,6 +191,7 @@ function HomePage() {
               else {
                 setTutorialStep(0);
                 setShowTutorial(false);
+                if (onboardingTourActive) advanceOnboardingTour();
               }
             }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"

@@ -23,8 +23,8 @@ export const Route = createFileRoute("/subsidies")({
 
 const tutSteps = (en: boolean) => [
   en
-    ? "This explains how the subsidy program works — apply once, upload requirements, and track your progress in real-time."
-    : "Ipinapaliwanag dito kung paano gumagana ang programa ng subsidy — magpasa ng aplikasyon nang isang beses, ibigay ang mga kinakailangang dokumento, at subaybayan ang kalagayan nito.",
+    ? "This is your Subsidies page. This explains how the subsidy program works — apply once, upload requirements, and track your progress in real-time."
+    : "Ito ang iyong Subsidies page. Ipinapaliwanag dito kung paano gumagana ang programa ng subsidy — magpasa ng aplikasyon nang isang beses, ibigay ang mga kinakailangang dokumento, at subaybayan ang kalagayan nito.",
   en
     ? "This is an example of an Approved application. It will show a green badge. Click on it to view your appointment details and QR code."
     : "Ito ay halimbawa ng naaprubahang aplikasyon. Mayroon itong kulay berdeng tanda. Pindutin ito upang makita ang detalye ng iyong takdang oras at QR code.",
@@ -81,8 +81,13 @@ function statusMeta(app: any, en: boolean) {
 }
 
 function SubsidiesPage() {
-  const { en, apps } = useSession();
+  const { en, apps, onboardingTourActive, advanceOnboardingTour, endOnboardingTour } = useSession();
   const [tutStep, setTutStep] = useState(0);
+
+  useEffect(() => {
+    if (onboardingTourActive && tutStep === 0) setTutStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingTourActive]);
   const steps = tutSteps(en);
 
   const renderTutorialCard = (stepNum: number, positionClasses: string) => {
@@ -102,13 +107,23 @@ function SubsidiesPage() {
         <p className="mb-6 text-sm text-white/80">{steps[tutStep - 1]}</p>
         <div className="flex gap-3">
           <button
-            onClick={() => setTutStep(0)}
+            onClick={() => {
+              setTutStep(0);
+              if (onboardingTourActive) endOnboardingTour();
+            }}
             className="flex-1 rounded-full border border-white/20 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
           >
             {en ? "Skip" : "Laktawan"}
           </button>
           <button
-            onClick={() => (tutStep < steps.length ? setTutStep((s) => s + 1) : setTutStep(0))}
+            onClick={() => {
+              if (tutStep < steps.length) {
+                setTutStep((s) => s + 1);
+              } else {
+                setTutStep(0);
+                if (onboardingTourActive) advanceOnboardingTour();
+              }
+            }}
             className="flex-1 rounded-full bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] transition-transform hover:scale-105 active:scale-95"
           >
             {tutStep === steps.length ? (en ? "Finish" : "Tapusin") : en ? "Next" : "Susunod"}
@@ -170,7 +185,10 @@ function SubsidiesPage() {
           </span>
         </div>
         {/* Render demo tutorial cards pointing to itself based on tutStep */}
-        {renderTutorialCard(tutStep, "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]")}
+        {renderTutorialCard(
+          tutStep,
+          "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+        )}
       </div>
     );
   };
@@ -209,9 +227,7 @@ function SubsidiesPage() {
         }
       />
 
-      {tutStep > 0 && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]" />
-      )}
+      {tutStep > 0 && <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]" />}
 
       <div className="flex flex-col gap-6 px-5 pb-24 pt-2">
         <div

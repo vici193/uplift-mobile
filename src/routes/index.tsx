@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, ShieldCheck, UserCheck } from "lucide-react";
 import logo from "@/assets/uplift-logo.png";
+import dotrLogo from "@/assets/dotr.png";
+import egovLogo from "@/assets/egov.png";
 import { MobileShell } from "@/components/mobile/MobileShell";
 
 export const Route = createFileRoute("/")({
@@ -35,7 +37,11 @@ function Landing() {
         </p>
 
         <div className="my-6 w-full flex justify-center">
-          <img src={logo} alt="PARA Logo" className="h-64 w-64 object-contain drop-shadow-2xl" />
+          <img
+            src={logo}
+            alt="PARA Logo"
+            className="h-48 w-48 object-contain drop-shadow-2xl"
+          />
         </div>
 
         <div className="flex w-full justify-center gap-3">
@@ -49,6 +55,12 @@ function Landing() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* New Logo Bar for DOTr and eGov */}
+      <div className="relative z-10 my-6 flex w-full flex-row items-center justify-center gap-6 px-12">
+        <img src={dotrLogo} alt="DOTr Logo" className="h-10 w-auto object-contain" />
+        <img src={egovLogo} alt="eGov Logo" className="h-10 w-auto object-contain" />
       </div>
 
       <div className="relative z-10 flex w-full flex-col gap-3 mt-8 pb-6">
