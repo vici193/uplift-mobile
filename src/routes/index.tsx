@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, ShieldCheck, UserCheck } from "lucide-react";
 import logo from "@/assets/uplift-logo.png";
 import dotrLogo from "@/assets/dotr.png";
-import egovLogo from "@/assets/egov.png";
+import egovLogo from "@/assets/ltfrb.png";
 import { MobileShell } from "@/components/mobile/MobileShell";
 
 export const Route = createFileRoute("/")({
