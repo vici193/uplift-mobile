@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "../lib/session-context";
-import { OnboardingOutroModal } from "../components/mobile/OnboardingOutroModal.tsx";
+import { OnboardingOutroModal } from "../components/mobile/OnboardingOutroModal";
 import {
   Outlet,
   Link,
@@ -80,13 +80,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#1b2b4b" },
-      { title: "UPLIFT" },
+      { title: "SUBI" },
       {
         name: "description",
         content: "Secure verification and direct subsidy applications for Filipino PUV drivers.",
       },
-      { name: "author", content: "UPLIFT" },
-      { property: "og:title", content: "UPLIFT — Fast-Track Your Benefits" },
+      { name: "author", content: "SUBI" },
+      { property: "og:title", content: "SUBI — Sulong sa Biyahe" },
       {
         property: "og:description",
         content: "Secure verification and direct subsidy applications for Filipino PUV drivers.",
@@ -117,7 +117,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <title>UPLIFT</title>
+        <title>SUBI</title>
         <HeadContent />
       </head>
       <body>

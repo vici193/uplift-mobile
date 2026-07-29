@@ -167,7 +167,7 @@ function AdminApplicationsTable() {
     setActiveRow(app);
     if (isDigital) {
       setApprovalMsg(
-        `Your application for ${ev?.program_name} has been approved. Since you chose ${app.ewallet_type}, you don't need to visit the venue \u2014 your \u20b1${ev?.program_amount || ""} subsidy will be sent to your ${app.ewallet_type} account, and we'll notify you here once it's sent.`,
+        `Naaprubahan po ang inyong aplikasyon para sa ${ev?.program_name}. Dahil ${app.ewallet_type} ang inyong napili, hindi na po kailangang pumunta sa venue \u2014 ipapadala po ang inyong \u20b1${ev?.program_amount || ""} na subsidy sa inyong ${app.ewallet_type} account, at aabisuhan po namin kayo dito kapag naipadala na.`,
       );
       setMode("approve");
       return;
@@ -179,7 +179,7 @@ function AdminApplicationsTable() {
       return;
     }
     setApprovalMsg(
-      `Your application for ${ev?.program_name} has been approved. You are assigned to ${batch.label} (${batch.time_start}\u2013${batch.time_end}). Please proceed to ${ev?.venue} on ${ev?.event_date} and bring your Driver's License and reference code.`,
+      `Naaprubahan po ang inyong aplikasyon para sa ${ev?.program_name}. Kayo po ay nakatakda sa ${batch.label} (${batch.time_start}\u2013${batch.time_end}). Mangyaring pumunta sa ${ev?.venue} sa petsang ${ev?.event_date} at magdala ng Driver's License at reference code.`,
     );
     setMode("approve");
   }
@@ -326,7 +326,7 @@ function AdminApplicationsTable() {
   async function markAsSent(a: any) {
     setSubmitting(true);
     const method = a.ewallet_type || "GCash";
-    const msg = `Your ₱${ev?.program_amount || ""} subsidy for ${ev?.program_name} has been sent to your ${method}. Please confirm in the app once you've received it.`;
+    const msg = `Ipinadala na po ang inyong ₱${ev?.program_amount || ""} na subsidy para sa ${ev?.program_name} sa inyong ${method}. Mangyaring kumpirmahin sa app kapag natanggap na ninyo ito.`;
     await supabase
       .from("applications")
       .update({
@@ -346,7 +346,7 @@ function AdminApplicationsTable() {
   async function retrySend(a: any) {
     setSubmitting(true);
     const method = a.ewallet_type || "GCash";
-    const msg = `We've re-sent your ₱${ev?.program_amount || ""} subsidy for ${ev?.program_name} to your ${method}. Please check and confirm in the app once you've received it.`;
+    const msg = `Muli po naming ipinadala ang inyong ₱${ev?.program_amount || ""} na subsidy para sa ${ev?.program_name} sa inyong ${method}. Mangyaring tingnan at kumpirmahin sa app kapag natanggap na ninyo ito.`;
     await supabase
       .from("applications")
       .update({
@@ -492,181 +492,181 @@ function AdminApplicationsTable() {
             <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
               <table className="w-full border-collapse text-left text-[12px]">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50 text-[10px] font-bold uppercase tracking-wide text-[#8c8b88]">
-                    <th className="sticky left-0 z-10 bg-gray-50 p-3 shadow-[1px_0_0_0_rgba(0,0,0,0.06)]">
-                      Full Name
+                <tr className="border-b border-gray-100 bg-gray-50 text-[10px] font-bold uppercase tracking-wide text-[#8c8b88]">
+                  <th className="sticky left-0 z-10 bg-gray-50 p-3 shadow-[1px_0_0_0_rgba(0,0,0,0.06)]">
+                    Full Name
+                  </th>
+                  {columns.map((c) => (
+                    <th key={c.key} className="whitespace-nowrap p-3">
+                      {c.label}
                     </th>
-                    {columns.map((c) => (
-                      <th key={c.key} className="whitespace-nowrap p-3">
-                        {c.label}
-                      </th>
-                    ))}
-                    <th className="whitespace-nowrap p-3">Status</th>
-                    <th className="whitespace-nowrap p-3">Claim</th>
-                    <th className="whitespace-nowrap p-3">Applied At</th>
-                    <th className="whitespace-nowrap p-3">Batch</th>
-                    <th className="whitespace-nowrap p-3">Actions</th>
-                  </tr>
+                  ))}
+                  <th className="whitespace-nowrap p-3">Status</th>
+                  <th className="whitespace-nowrap p-3">Claim</th>
+                  <th className="whitespace-nowrap p-3">Applied At</th>
+                  <th className="whitespace-nowrap p-3">Batch</th>
+                  <th className="whitespace-nowrap p-3">Actions</th>
+                </tr>
                 </thead>
                 <tbody>
-                  {visibleApps.map((a) => {
-                    const badgeCls =
-                      a.status === "pending"
-                        ? "bg-amber-50 text-amber-600"
-                        : a.status === "approved" || a.status === "claimed"
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-red-50 text-red-600";
-                    const isDisputed = disputedIds.has(a.id);
-                    return (
-                      <tr
-                        key={a.id}
-                        className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60"
-                      >
-                        <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-3 font-bold text-[#1b2b4b] shadow-[1px_0_0_0_rgba(0,0,0,0.06)]">
-                          {a.drivers?.full_name}
+                {visibleApps.map((a) => {
+                  const badgeCls =
+                    a.status === "pending"
+                      ? "bg-amber-50 text-amber-600"
+                      : a.status === "approved" || a.status === "claimed"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-red-50 text-red-600";
+                  const isDisputed = disputedIds.has(a.id);
+                  return (
+                    <tr
+                      key={a.id}
+                      className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60"
+                    >
+                      <td className="sticky left-0 z-10 whitespace-nowrap bg-white p-3 font-bold text-[#1b2b4b] shadow-[1px_0_0_0_rgba(0,0,0,0.06)]">
+                        {a.drivers?.full_name}
+                      </td>
+                      {columns.map((c) => (
+                        <td key={c.key} className="whitespace-nowrap p-3 text-gray-600">
+                          {c.get(a)}
                         </td>
-                        {columns.map((c) => (
-                          <td key={c.key} className="whitespace-nowrap p-3 text-gray-600">
-                            {c.get(a)}
-                          </td>
-                        ))}
-                        <td className="whitespace-nowrap p-3">
-                          <div className="flex flex-col gap-1">
+                      ))}
+                      <td className="whitespace-nowrap p-3">
+                        <div className="flex flex-col gap-1">
                             <span
                               className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${badgeCls}`}
                             >
                               {a.status}
                             </span>
-                            {isDisputed && (
-                              <button
-                                onClick={() =>
-                                  navigate({
-                                    to: "/admin/support",
-                                    search: { grievanceId: disputedIds.get(a.id) },
-                                  })
-                                }
-                                className="inline-flex w-fit items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold uppercase text-red-600 hover:bg-red-200"
-                              >
-                                ⚠️ Disputed — Open Chat
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap p-3">
-                          {a.status !== "approved" ? (
-                            <span className="text-[11px] text-gray-300">—</span>
-                          ) : (a.ewallet_type || "Cash") === "Cash" ? (
-                            a.claim_status === "confirmed" ? (
-                              <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600">
+                          {isDisputed && (
+                            <button
+                              onClick={() =>
+                                navigate({
+                                  to: "/admin/support",
+                                  search: { grievanceId: disputedIds.get(a.id) },
+                                })
+                              }
+                              className="inline-flex w-fit items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold uppercase text-red-600 hover:bg-red-200"
+                            >
+                              ⚠️ Disputed — Open Chat
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap p-3">
+                        {a.status !== "approved" ? (
+                          <span className="text-[11px] text-gray-300">—</span>
+                        ) : (a.ewallet_type || "Cash") === "Cash" ? (
+                          a.claim_status === "confirmed" ? (
+                            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600">
                                 Claimed
                               </span>
-                            ) : (
-                              <button
-                                onClick={() => openConfirmClaim(a)}
-                                className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100"
-                              >
-                                Confirm Claim
-                              </button>
-                            )
-                          ) : a.claim_status === "confirmed" ? (
-                            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600">
+                          ) : (
+                            <button
+                              onClick={() => openConfirmClaim(a)}
+                              className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100"
+                            >
+                              Confirm Claim
+                            </button>
+                          )
+                        ) : a.claim_status === "confirmed" ? (
+                          <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600">
                               Received
                             </span>
-                          ) : a.claim_status === "sent" ? (
-                            isDisputed ? (
-                              <div className="flex flex-col items-start gap-1">
+                        ) : a.claim_status === "sent" ? (
+                          isDisputed ? (
+                            <div className="flex flex-col items-start gap-1">
                                 <span className="inline-flex flex-col rounded-full bg-red-50 px-2 py-1 text-[9px] font-bold uppercase leading-tight text-red-600">
                                   Driver has not claimed subsidy yet
                                   <span className="normal-case">Hindi pa naa-claim ng driver</span>
                                 </span>
-                                <button
-                                  onClick={() => retrySend(a)}
-                                  disabled={submitting}
-                                  className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100 disabled:opacity-50"
-                                >
-                                  Retry Send
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase text-amber-600">
+                              <button
+                                onClick={() => retrySend(a)}
+                                disabled={submitting}
+                                className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100 disabled:opacity-50"
+                              >
+                                Retry Send
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase text-amber-600">
                                 Awaiting confirmation
                               </span>
-                            )
-                          ) : (
-                            <button
-                              onClick={() => markAsSent(a)}
-                              disabled={submitting}
-                              className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100 disabled:opacity-50"
-                            >
-                              Mark as Sent
-                            </button>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap p-3 text-gray-500">
-                          {new Date(a.applied_at).toLocaleDateString()}
-                        </td>
-                        <td className="whitespace-nowrap p-3">
-                          {a.ewallet_type === "GCash" || a.ewallet_type === "Maya" ? (
-                            <span className="text-[11px] italic text-gray-400">
+                          )
+                        ) : (
+                          <button
+                            onClick={() => markAsSent(a)}
+                            disabled={submitting}
+                            className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-100 disabled:opacity-50"
+                          >
+                            Mark as Sent
+                          </button>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap p-3 text-gray-500">
+                        {new Date(a.applied_at).toLocaleDateString()}
+                      </td>
+                      <td className="whitespace-nowrap p-3">
+                        {a.ewallet_type === "GCash" || a.ewallet_type === "Maya" ? (
+                          <span className="text-[11px] italic text-gray-400">
                               Not needed ({a.ewallet_type})
                             </span>
-                          ) : a.status === "pending" ? (
-                            <select
-                              value={batchSelect[a.id] || ""}
-                              onChange={(e) =>
-                                setBatchSelect((prev) => ({ ...prev, [a.id]: e.target.value }))
-                              }
-                              className="rounded-lg border border-gray-200 bg-gray-50 p-1.5 text-[11px] font-semibold text-[#1b2b4b] outline-none focus:border-[#f5a623]"
-                            >
-                              <option value="">Select batch...</option>
-                              {batches.map((b) => (
-                                <option key={b.id} value={b.id}>
-                                  {b.label} ({b.time_start}–{b.time_end})
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-[11px] font-semibold text-[#1b2b4b]">
+                        ) : a.status === "pending" ? (
+                          <select
+                            value={batchSelect[a.id] || ""}
+                            onChange={(e) =>
+                              setBatchSelect((prev) => ({ ...prev, [a.id]: e.target.value }))
+                            }
+                            className="rounded-lg border border-gray-200 bg-gray-50 p-1.5 text-[11px] font-semibold text-[#1b2b4b] outline-none focus:border-[#f5a623]"
+                          >
+                            <option value="">Select batch...</option>
+                            {batches.map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {b.label} ({b.time_start}–{b.time_end})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-[#1b2b4b]">
                               {a.batch_label
                                 ? `${a.batch_label} (${a.batch_time_start}\u2013${a.batch_time_end})`
                                 : "\u2014"}
                             </span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap p-3">
-                          {a.status === "pending" ? (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => openReject(a)}
-                                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[12px] font-bold text-red-600 hover:border-red-200 hover:bg-red-50"
-                              >
-                                <X size={15} /> Reject
-                              </button>
-                              <button
-                                onClick={() => openReply(a)}
-                                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[12px] font-bold text-[#1b2b4b] hover:bg-gray-100"
-                              >
-                                <MessageSquare size={15} /> Reply
-                              </button>
-                              <button
-                                onClick={() => openApprove(a)}
-                                className="flex items-center gap-1.5 rounded-lg bg-[#1b2b4b] px-3 py-2 text-[12px] font-bold text-white hover:bg-[#2a3f68]"
-                              >
-                                <CheckCircle2 size={15} /> Approve
-                              </button>
-                            </div>
-                          ) : (
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap p-3">
+                        {a.status === "pending" ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openReject(a)}
+                              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[12px] font-bold text-red-600 hover:border-red-200 hover:bg-red-50"
+                            >
+                              <X size={15} /> Reject
+                            </button>
                             <button
                               onClick={() => openReply(a)}
                               className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[12px] font-bold text-[#1b2b4b] hover:bg-gray-100"
                             >
                               <MessageSquare size={15} /> Reply
                             </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                            <button
+                              onClick={() => openApprove(a)}
+                              className="flex items-center gap-1.5 rounded-lg bg-[#1b2b4b] px-3 py-2 text-[12px] font-bold text-white hover:bg-[#2a3f68]"
+                            >
+                              <CheckCircle2 size={15} /> Approve
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => openReply(a)}
+                            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[12px] font-bold text-[#1b2b4b] hover:bg-gray-100"
+                          >
+                            <MessageSquare size={15} /> Reply
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 </tbody>
               </table>
             </div>
@@ -724,7 +724,7 @@ function AdminApplicationsTable() {
                   <button
                     onClick={() =>
                       setReplyMsg(
-                        `Your application for ${ev.program_name} has been received and is now under review. Please expect a result within 3\u20135 business days.`,
+                        `Natanggap na po ang inyong aplikasyon para sa ${ev.program_name} at ito ay kasalukuyang sinusuri. Mangyaring maghintay ng resulta sa loob ng 3\u20135 araw ng trabaho.`,
                       )
                     }
                     className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-[#1b2b4b]"
@@ -734,7 +734,7 @@ function AdminApplicationsTable() {
                   <button
                     onClick={() =>
                       setReplyMsg(
-                        `Your application for ${ev.program_name} requires additional information before it can be processed. Please update your details and resubmit.`,
+                        `Kailangan po ng karagdagang impormasyon para sa inyong aplikasyon sa ${ev.program_name} bago ito maproseso. Mangyaring i-update ang inyong detalye at isumite muli.`,
                       )
                     }
                     className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-bold text-[#1b2b4b]"
@@ -770,7 +770,12 @@ function AdminApplicationsTable() {
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
                 <p className="mb-2 text-[13px] font-bold text-red-600">Select incorrect fields:</p>
                 <div className="mb-2 grid grid-cols-2 gap-2">
-                  {rejectionOptions.map((opt) => (
+                  {[
+                    ...rejectionOptions,
+                    ...(activeRow?.ewallet_type === "GCash" || activeRow?.ewallet_type === "Maya"
+                      ? [`${activeRow.ewallet_type} Number`]
+                      : []),
+                  ].map((opt) => (
                     <label key={opt} className="flex items-center gap-2 text-[11px] text-[#1b2b4b]">
                       <input
                         type="checkbox"

@@ -11,7 +11,6 @@ import {
   Clock,
   User,
   BusFront,
-  Edit,
   MessageSquare,
   BookOpen,
   ChevronUp,
@@ -605,12 +604,6 @@ function HomePage() {
                   >
                     {en ? "View my concerns" : "Tingnan ang aking mga alalahanin"}{" "}
                     <MessageSquare size={16} />
-                  </Link>
-                  <Link
-                    to="/grievance"
-                    className="flex items-center justify-between rounded-2xl p-3 text-[13px] font-bold text-[#1b2b4b] hover:bg-gray-50"
-                  >
-                    {en ? "File a Grievance" : "Mag-file ng Reklamo"} <Edit size={16} />
                   </Link>
                 </div>
               )}

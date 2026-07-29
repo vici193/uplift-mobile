@@ -15,17 +15,10 @@ export const Route = createFileRoute("/myconcern")({
 
 const getTutSteps = (en: boolean) => [
   {
-    title: en ? "Your Concerns" : "Iyong mga Alalahanin",
-    desc: en
-      ? "This is the My Concerns page. This is where all your concerns and grievances live, grouped by subsidy. Tap any entry to see the full conversation and any reply from the agency."
-      : "Ito ang My Concerns page. Dito makikita ang lahat ng iyong alalahanin, hinati-hati ayon sa subsidy. I-tap ang alinman para makita ang buong usapan.",
-    target: "tut-concern-list",
-  },
-  {
     title: en ? "File a New Concern" : "Mag-file ng Bagong Alalahanin",
     desc: en
-      ? "Didn't find your concern above? Tap 'File a New Concern' to send a new question directly to the agency."
-      : "Hindi mo nahanap ang alalahanin mo? I-tap ang 'Mag-file ng Bagong Alalahanin'.",
+      ? "This is the My Concerns page. Tap 'File a New Concern' anytime to send a new question directly to the agency."
+      : "Ito ang My Concerns page. I-tap ang 'Mag-file ng Bagong Alalahanin' anumang oras para magpadala ng bagong tanong sa ahensya.",
     target: "tut-new-btn",
   },
   {
@@ -49,6 +42,13 @@ const getTutSteps = (en: boolean) => [
       : "Ilarawan ang iyong alalahanin. Awtomatikong na-save ang draft.",
     target: "tut-form-message",
   },
+  {
+    title: en ? "Your Concerns" : "Iyong mga Alalahanin",
+    desc: en
+      ? "Once submitted, you'll see it here — every concern and grievance you've filed, grouped by subsidy. Tap any entry to see the full conversation and any reply from the agency."
+      : "Kapag naisumite na, makikita mo ito dito — lahat ng alalahanin at reklamo na iyong naihain, hinati-hati ayon sa subsidy. I-tap ang alinman para makita ang buong usapan.",
+    target: "tut-concern-list",
+  },
 ];
 
 function getThreadMessages(c: any) {
@@ -56,13 +56,13 @@ function getThreadMessages(c: any) {
     c.is_draft || c.status === "draft"
       ? []
       : [
-          {
-            id: `opening-${c.id}`,
-            message: c.message,
-            sent_by: "driver",
-            created_at: c.created_at,
-          },
-        ];
+        {
+          id: `opening-${c.id}`,
+          message: c.message,
+          sent_by: "driver",
+          created_at: c.created_at,
+        },
+      ];
   const extra = (c.grievance_messages || [])
     .slice()
     .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -123,16 +123,20 @@ function MyConcernsPage() {
   const [newConcernAppId, setNewConcernAppId] = useState<string | null>(null);
   const [newConcernType, setNewConcernType] = useState("");
   const [newConcernMessage, setNewConcernMessage] = useState("");
+  const [fileAsGrievance, setFileAsGrievance] = useState(false);
   const currentDraftIdRef = useRef<string | null>(null);
   const [autoSaveTimer, setAutoSaveTimer] = useState<any>(null);
 
-  // Manage form visibility during tutorial
+  const selectedAppForConcern = apps.find((a: any) => a.id === newConcernAppId);
+
+  // Manage form visibility during tutorial (steps 2-4 are the form fields;
+  // step 1 is the closed button, step 5 is the list — form should be closed for both)
   useEffect(() => {
     if (tutStep === 0) return;
-    if (tutStep < 3) {
-      setShowNewForm(false);
-    } else {
+    if (tutStep >= 2 && tutStep <= 4) {
       setShowNewForm(true);
+    } else {
+      setShowNewForm(false);
     }
   }, [tutStep]);
 
@@ -216,6 +220,7 @@ function MyConcernsPage() {
             draft_message: value,
             message: value,
             concern_type: newConcernType || "General",
+            is_grievance: fileAsGrievance,
           })
           .eq("id", currentDraftIdRef.current);
       } else {
@@ -223,12 +228,13 @@ function MyConcernsPage() {
           .from("grievances")
           .insert({
             driver_id: driverId,
-            application_id: newConcernAppId || null,
+            application_id: newConcernAppId && newConcernAppId !== "other" ? newConcernAppId : null,
             concern_type: newConcernType || "General",
             message: value,
             draft_message: value,
             is_draft: true,
             status: "draft",
+            is_grievance: fileAsGrievance,
           })
           .select()
           .single();
@@ -239,29 +245,48 @@ function MyConcernsPage() {
     setAutoSaveTimer(timer);
   }
 
+  const [submittingConcern, setSubmittingConcern] = useState(false);
+
   async function submitNewConcern() {
+    // Guards against the exact bug we saw: submitting faster than the 1500ms
+    // draft-autosave debounce meant that pending timer could still fire AFTER
+    // submit and insert/update a second, duplicate row. Cancelling the timer
+    // here — and blocking a second concurrent submit — closes both gaps.
+    if (submittingConcern) return;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+
     const subsidyOptional = newConcernType === "How to Use This App" || newConcernType === "Other";
     if (!newConcernMessage.trim() || (!subsidyOptional && !newConcernAppId)) return;
+
+    setSubmittingConcern(true);
     if (currentDraftIdRef.current) {
       await supabase
         .from("grievances")
-        .update({ message: newConcernMessage, is_draft: false, status: "submitted" })
+        .update({
+          message: newConcernMessage,
+          is_draft: false,
+          status: "submitted",
+          is_grievance: fileAsGrievance,
+        })
         .eq("id", currentDraftIdRef.current);
     } else {
       await supabase.from("grievances").insert({
         driver_id: driverId,
-        application_id: newConcernAppId,
+        application_id: newConcernAppId && newConcernAppId !== "other" ? newConcernAppId : null,
         concern_type: newConcernType || "General",
         message: newConcernMessage,
         is_draft: false,
         status: "submitted",
+        is_grievance: fileAsGrievance,
       });
     }
     setShowNewForm(false);
     setNewConcernMessage("");
     setNewConcernType("");
     setNewConcernAppId(null);
+    setFileAsGrievance(false);
     currentDraftIdRef.current = null;
+    setSubmittingConcern(false);
     await refreshConcerns();
   }
 
@@ -293,6 +318,180 @@ function MyConcernsPage() {
       {tutStep > 0 && <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]" />}
 
       <div className="flex flex-col gap-4 px-5 pb-24 pt-4">
+        {showNewForm ? (
+          <div className="rounded-2xl border border-[#f0f0f0] bg-white p-4">
+            <p className="mb-3 font-extrabold text-[#1b2b4b]">
+              {en ? "New Concern" : "Bagong Alalahanin"}
+            </p>
+
+            <div
+              id="tut-form-type"
+              className={cn(
+                "relative transition-all",
+                isHighlighted("tut-form-type")
+                  ? "z-[250] rounded-xl bg-white p-2 shadow-2xl ring-4 ring-[#f5a623] -m-2"
+                  : "",
+              )}
+            >
+              <label className="mb-1 block text-[12px] font-bold text-[#8c8b88]">
+                {en ? "Type of Concern" : "Uri ng Alalahanin"}
+              </label>
+              <select
+                className="mb-3 w-full rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                value={newConcernType}
+                onChange={(e) => setNewConcernType(e.target.value)}
+              >
+                <option value="">{en ? "Select..." : "Pumili..."}</option>
+                <option value="Application Issue">
+                  {en ? "Application Issue" : "Problema sa Aplikasyon"}
+                </option>
+                <option value="Payout Issue">{en ? "Payout Issue" : "Problema sa Payout"}</option>
+                <option value="Eligibility Question">
+                  {en ? "Eligibility Question" : "Tanong sa Kwalipikasyon"}
+                </option>
+                <option value="Document Concern">
+                  {en ? "Document Concern" : "Alalahanin sa Dokumento"}
+                </option>
+                <option value="How to Use This App">
+                  {en ? "How to Use This App" : "Paano Gamitin ang App"}
+                </option>
+                <option value="Other">{en ? "Other" : "Iba pa"}</option>
+              </select>
+              {renderTutorialCard(
+                "tut-form-type",
+                "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+              )}
+            </div>
+
+            <div
+              id="tut-form-subsidy"
+              className={cn(
+                "relative transition-all",
+                isHighlighted("tut-form-subsidy")
+                  ? "z-[250] rounded-xl bg-white p-2 shadow-2xl ring-4 ring-[#f5a623] -m-2"
+                  : "",
+              )}
+            >
+              <label className="mb-1 block text-[12px] font-bold text-[#8c8b88]">
+                {newConcernType === "How to Use This App" || newConcernType === "Other"
+                  ? en
+                    ? "Which subsidy? (optional)"
+                    : "Aling subsidy? (opsyonal)"
+                  : en
+                    ? "Which subsidy is this about? *"
+                    : "Aling subsidy? *"}
+              </label>
+              <select
+                className="mb-3 w-full rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                value={newConcernAppId || ""}
+                onChange={(e) => {
+                  setNewConcernAppId(e.target.value);
+                  const picked = apps.find((a: any) => a.id === e.target.value);
+                  if (picked?.status !== "rejected") setFileAsGrievance(false);
+                }}
+              >
+                <option value="">{en ? "Select a subsidy..." : "Pumili ng subsidy..."}</option>
+                {apps.map((a: any) => (
+                  <option key={a.id} value={a.id}>
+                    {a.payout_events?.program_name} ({a.status})
+                  </option>
+                ))}
+                <option value="other">{en ? "Other" : "Iba pa"}</option>
+              </select>
+              {selectedAppForConcern?.status === "rejected" && (
+                <label className="mb-3 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-[12px] font-semibold text-red-700">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={fileAsGrievance}
+                    onChange={(e) => setFileAsGrievance(e.target.checked)}
+                  />
+                  {en
+                    ? "This application was rejected — file this as a formal Grievance instead of a general concern."
+                    : "Ang aplikasyong ito ay tinanggihan — ihain ito bilang pormal na Reklamo (Grievance) sa halip na pangkalahatang alalahanin."}
+                </label>
+              )}
+              {renderTutorialCard(
+                "tut-form-subsidy",
+                "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+              )}
+            </div>
+
+            <div
+              id="tut-form-message"
+              className={cn(
+                "relative transition-all",
+                isHighlighted("tut-form-message")
+                  ? "z-[250] rounded-xl bg-white p-2 shadow-2xl ring-4 ring-[#f5a623] -m-2"
+                  : "",
+              )}
+            >
+              <label className="mb-1 block text-[12px] font-bold text-[#8c8b88]">
+                {en ? "Your Message" : "Ang Iyong Mensahe"}
+              </label>
+              <textarea
+                className="min-h-[80px] w-full rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
+                placeholder={en ? "Describe your concern..." : "Ilarawan ang iyong alalahanin..."}
+                value={newConcernMessage}
+                onChange={(e) => handleNewMessageChange(e.target.value)}
+              />
+              {newConcernMessage.trim() && (
+                <p className="mt-1 text-[11px] text-[#8c8b88]">
+                  💾 {en ? "Auto-saving draft..." : "Awtomatikong nini-save..."}
+                </p>
+              )}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={submitNewConcern}
+                  disabled={submittingConcern}
+                  className="flex-1 rounded-xl bg-[#1b2b4b] py-3 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {submittingConcern ? "..." : en ? "Submit Concern" : "Isumite"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNewForm(false);
+                    setNewConcernMessage("");
+                    setNewConcernType("");
+                    setNewConcernAppId(null);
+                    setFileAsGrievance(false);
+                    currentDraftIdRef.current = null;
+                  }}
+                  className="flex-1 rounded-xl border border-[#1b2b4b]/20 py-3 text-sm font-bold text-[#1b2b4b]"
+                >
+                  {en ? "Cancel" : "Kanselahin"}
+                </button>
+              </div>
+              {renderTutorialCard(
+                "tut-form-message",
+                "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+              )}
+            </div>
+          </div>
+        ) : (
+          <div
+            id="tut-new-btn"
+            className={cn(
+              "relative transition-all",
+              isHighlighted("tut-new-btn")
+                ? "z-[250] rounded-2xl bg-white shadow-2xl ring-4 ring-[#f5a623]"
+                : "",
+            )}
+          >
+            <button
+              onClick={() => setShowNewForm(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#f0f0f0] bg-white py-4 text-sm font-bold text-[#1b2b4b] hover:bg-gray-50"
+            >
+              <Plus className="h-4 w-4" />{" "}
+              {en ? "File a New Concern" : "Mag-file ng Bagong Alalahanin"}
+            </button>
+            {renderTutorialCard(
+              "tut-new-btn",
+              "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
+            )}
+          </div>
+        )}
+
         {Object.keys(grouped).length === 0 && !showNewForm && (
           <div
             id={Object.keys(grouped).length === 0 ? "tut-concern-list" : undefined}
@@ -363,160 +562,6 @@ function MyConcernsPage() {
             </div>
           ))}
         </div>
-
-        {showNewForm ? (
-          <div className="rounded-2xl border border-[#f0f0f0] bg-white p-4">
-            <p className="mb-3 font-extrabold text-[#1b2b4b]">
-              {en ? "New Concern" : "Bagong Alalahanin"}
-            </p>
-
-            <div
-              id="tut-form-type"
-              className={cn(
-                "relative transition-all",
-                isHighlighted("tut-form-type")
-                  ? "z-[250] rounded-xl bg-white p-2 shadow-2xl ring-4 ring-[#f5a623] -m-2"
-                  : "",
-              )}
-            >
-              <label className="mb-1 block text-[12px] font-bold text-[#8c8b88]">
-                {en ? "Type of Concern" : "Uri ng Alalahanin"}
-              </label>
-              <select
-                className="mb-3 w-full rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-                value={newConcernType}
-                onChange={(e) => setNewConcernType(e.target.value)}
-              >
-                <option value="">{en ? "Select..." : "Pumili..."}</option>
-                <option value="Application Issue">
-                  {en ? "Application Issue" : "Problema sa Aplikasyon"}
-                </option>
-                <option value="Payout Issue">{en ? "Payout Issue" : "Problema sa Payout"}</option>
-                <option value="Eligibility Question">
-                  {en ? "Eligibility Question" : "Tanong sa Kwalipikasyon"}
-                </option>
-                <option value="Document Concern">
-                  {en ? "Document Concern" : "Alalahanin sa Dokumento"}
-                </option>
-                <option value="How to Use This App">
-                  {en ? "How to Use This App" : "Paano Gamitin ang App"}
-                </option>
-                <option value="Other">{en ? "Other" : "Iba pa"}</option>
-              </select>
-              {renderTutorialCard(
-                "tut-form-type",
-                "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
-              )}
-            </div>
-
-            <div
-              id="tut-form-subsidy"
-              className={cn(
-                "relative transition-all",
-                isHighlighted("tut-form-subsidy")
-                  ? "z-[250] rounded-xl bg-white p-2 shadow-2xl ring-4 ring-[#f5a623] -m-2"
-                  : "",
-              )}
-            >
-              <label className="mb-1 block text-[12px] font-bold text-[#8c8b88]">
-                {newConcernType === "How to Use This App" || newConcernType === "Other"
-                  ? en
-                    ? "Which subsidy? (optional)"
-                    : "Aling subsidy? (opsyonal)"
-                  : en
-                    ? "Which subsidy is this about? *"
-                    : "Aling subsidy? *"}
-              </label>
-              <select
-                className="mb-3 w-full rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-                value={newConcernAppId || ""}
-                onChange={(e) => setNewConcernAppId(e.target.value)}
-              >
-                <option value="">{en ? "Select a subsidy..." : "Pumili ng subsidy..."}</option>
-                {apps.map((a: any) => (
-                  <option key={a.id} value={a.id}>
-                    {a.payout_events?.program_name} ({a.status})
-                  </option>
-                ))}
-              </select>
-              {renderTutorialCard(
-                "tut-form-subsidy",
-                "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
-              )}
-            </div>
-
-            <div
-              id="tut-form-message"
-              className={cn(
-                "relative transition-all",
-                isHighlighted("tut-form-message")
-                  ? "z-[250] rounded-xl bg-white p-2 shadow-2xl ring-4 ring-[#f5a623] -m-2"
-                  : "",
-              )}
-            >
-              <label className="mb-1 block text-[12px] font-bold text-[#8c8b88]">
-                {en ? "Your Message" : "Ang Iyong Mensahe"}
-              </label>
-              <textarea
-                className="min-h-[80px] w-full rounded-xl border border-gray-100 bg-[#f8f9fa] p-3 text-sm"
-                placeholder={en ? "Describe your concern..." : "Ilarawan ang iyong alalahanin..."}
-                value={newConcernMessage}
-                onChange={(e) => handleNewMessageChange(e.target.value)}
-              />
-              {newConcernMessage.trim() && (
-                <p className="mt-1 text-[11px] text-[#8c8b88]">
-                  💾 {en ? "Auto-saving draft..." : "Awtomatikong nini-save..."}
-                </p>
-              )}
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={submitNewConcern}
-                  className="flex-1 rounded-xl bg-[#1b2b4b] py-3 text-sm font-bold text-white"
-                >
-                  {en ? "Submit Concern" : "Isumite"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowNewForm(false);
-                    setNewConcernMessage("");
-                    setNewConcernType("");
-                    setNewConcernAppId(null);
-                    currentDraftIdRef.current = null;
-                  }}
-                  className="flex-1 rounded-xl border border-[#1b2b4b]/20 py-3 text-sm font-bold text-[#1b2b4b]"
-                >
-                  {en ? "Cancel" : "Kanselahin"}
-                </button>
-              </div>
-              {renderTutorialCard(
-                "tut-form-message",
-                "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
-              )}
-            </div>
-          </div>
-        ) : (
-          <div
-            id="tut-new-btn"
-            className={cn(
-              "relative transition-all",
-              isHighlighted("tut-new-btn")
-                ? "z-[250] rounded-2xl bg-white shadow-2xl ring-4 ring-[#f5a623]"
-                : "",
-            )}
-          >
-            <button
-              onClick={() => setShowNewForm(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#f0f0f0] bg-white py-4 text-sm font-bold text-[#1b2b4b] hover:bg-gray-50"
-            >
-              <Plus className="h-4 w-4" />{" "}
-              {en ? "File a New Concern" : "Mag-file ng Bagong Alalahanin"}
-            </button>
-            {renderTutorialCard(
-              "tut-new-btn",
-              "bottom-full left-1/2 -translate-x-1/2 mb-4 w-[300px] sm:w-[320px]",
-            )}
-          </div>
-        )}
       </div>
     </MobileShell>
   );
