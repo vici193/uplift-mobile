@@ -268,15 +268,15 @@ function HomePage() {
                       {driver.license_url
                         ? en
                           ? "Verification in review"
-                          : "Sinusuri ang Verification"
+                          : "Sinusuri ang Beripikasyon"
                         : en
                           ? "Verification needed"
-                          : "Kailangan ng Verification"}
+                          : "Kailangan ng Beripikasyon"}
                     </span>
                   )}
                   {driver?.verification_status === "rejected" && (
                     <span className="mt-1.5 inline-flex w-max items-center gap-1.5 rounded-full border border-red-400/40 bg-red-400/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
-                      {en ? "Verification rejected" : "Tinanggihan ang Verification"}
+                      {en ? "Verification rejected" : "Tinanggihan ang Beripikasyon"}
                     </span>
                   )}
                 </div>
@@ -301,7 +301,7 @@ function HomePage() {
         </div>
 
         <div className="flex flex-col gap-8 px-5 pb-8 pt-2">
-          {driver?.verification_status !== "verified" && (
+          {driver?.verification_status === "unverified" && driver?.license_url && (
             <div
               id="verification-upload"
               className={cn(
@@ -311,68 +311,21 @@ function HomePage() {
                   : "",
               )}
             >
-              <p className="mb-1 text-[14px] font-extrabold text-[#1b2b4b]">
-                🪪 {en ? "Submit Verification Documents" : "Mag-submit ng Dokumento"}
-              </p>
-              <ul className="mb-3 list-disc pl-4 text-[11px] leading-relaxed text-[#8c8b88]">
-                <li>
-                  {en
-                    ? "Selfie while holding your Driver's License"
-                    : "Selfie habang hawak ang iyong Driver's License"}
-                </li>
-                <li>{en ? "Front of Driver's License" : "Harap ng Driver's License"}</li>
-                <li>{en ? "Back of Driver's License" : "Likod ng Driver's License"}</li>
-              </ul>
-
-              {driver?.verification_status === "rejected" && (
-                <button
-                  onClick={() => navigate({ to: "/edit" })}
-                  className="mb-3 flex items-center gap-1.5 rounded-full border border-[#1b2b4b]/20 bg-white px-3 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-50"
-                >
-                  ✏️ {en ? "Edit My Information" : "I-edit ang Aking Impormasyon"}
-                </button>
-              )}
-
-              <label className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-[#f5a623]/40 bg-white p-4 text-center">
-                <span className="text-2xl">{dashFiles && dashFiles.length > 0 ? "✅" : "📂"}</span>
-                <span className="text-[12px] font-semibold text-[#1b2b4b]">
-                  {dashFiles && dashFiles.length > 0
-                    ? `${dashFiles.length} ${en ? "file(s) selected" : "file(s) napili"}`
-                    : en
-                      ? "Tap to select files (JPG, PNG, PDF, Word, Excel)"
-                      : "I-tap para pumili ng mga file"}
-                </span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/jpeg,image/png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) setDashFiles(e.target.files);
-                  }}
-                />
-              </label>
-
-              {dashFiles && dashFiles.length > 0 && (
-                <button
-                  onClick={async () => {
-                    setUploadingDash(true);
-                    await handleUploadDocument(Array.from(dashFiles));
-                    setDashFiles(null);
-                    setUploadingDash(false);
-                  }}
-                  disabled={uploadingDash}
-                  className="mt-3 w-full rounded-2xl bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] disabled:opacity-60"
-                >
-                  {uploadingDash
-                    ? en
-                      ? "Uploading..."
-                      : "Ina-upload..."
-                    : en
-                      ? `Submit ${dashFiles.length} Document(s)`
-                      : `Isumite ang ${dashFiles.length} Dokumento`}
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f5a623]/15">
+                  <Clock className="h-5 w-5 text-[#f5a623]" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p className="text-[14px] font-extrabold text-[#1b2b4b]">
+                    {en ? "Reviewing your verification" : "Sinusuri ang inyong beripikasyon"}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-[#8c8b88]">
+                    {en
+                      ? "We've received your documents. We'll notify you once verification is complete."
+                      : "Natanggap na namin ang inyong mga dokumento. Aabisuhan namin kayo kapag tapos na ang veripikasyon."}
+                  </p>
+                </div>
+              </div>
 
               {renderTutorialCard(
                 "verification-upload",
@@ -380,6 +333,90 @@ function HomePage() {
               )}
             </div>
           )}
+
+          {driver?.verification_status !== "verified" &&
+            !(driver?.verification_status === "unverified" && driver?.license_url) && (
+              <div
+                id="verification-upload"
+                className={cn(
+                  "rounded-[24px] border-2 border-dashed border-[#f5a623]/50 bg-[#fffaf0] p-5 transition-all relative",
+                  isHighlighted("verification-upload")
+                    ? "z-[250] border-solid bg-white shadow-2xl ring-4 ring-[#f5a623]"
+                    : "",
+                )}
+              >
+                <p className="mb-1 text-[14px] font-extrabold text-[#1b2b4b]">
+                  🪪 {en ? "Submit Verification Documents" : "Mag-submit ng Dokumento"}
+                </p>
+                <ul className="mb-3 list-disc pl-4 text-[11px] leading-relaxed text-[#8c8b88]">
+                  <li>
+                    {en
+                      ? "Selfie while holding your Driver's License"
+                      : "Selfie habang hawak ang iyong Driver's License"}
+                  </li>
+                  <li>{en ? "Front of Driver's License" : "Harap ng Driver's License"}</li>
+                  <li>{en ? "Back of Driver's License" : "Likod ng Driver's License"}</li>
+                </ul>
+
+                {driver?.verification_status === "rejected" && (
+                  <button
+                    onClick={() => navigate({ to: "/edit" })}
+                    className="mb-3 flex items-center gap-1.5 rounded-full border border-[#1b2b4b]/20 bg-white px-3 py-1.5 text-[11px] font-bold text-[#1b2b4b] hover:bg-gray-50"
+                  >
+                    ✏️ {en ? "Edit My Information" : "I-edit ang Aking Impormasyon"}
+                  </button>
+                )}
+
+                <label className="flex cursor-pointer flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-[#f5a623]/40 bg-white p-4 text-center">
+                  <span className="text-2xl">
+                    {dashFiles && dashFiles.length > 0 ? "✅" : "📂"}
+                  </span>
+                  <span className="text-[12px] font-semibold text-[#1b2b4b]">
+                    {dashFiles && dashFiles.length > 0
+                      ? `${dashFiles.length} ${en ? "file(s) selected" : "file(s) napili"}`
+                      : en
+                        ? "Tap to select files (JPG, PNG, PDF, Word, Excel)"
+                        : "I-tap para pumili ng mga file"}
+                  </span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0)
+                        setDashFiles(e.target.files);
+                    }}
+                  />
+                </label>
+
+                {dashFiles && dashFiles.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      setUploadingDash(true);
+                      await handleUploadDocument(Array.from(dashFiles));
+                      setDashFiles(null);
+                      setUploadingDash(false);
+                    }}
+                    disabled={uploadingDash}
+                    className="mt-3 w-full rounded-2xl bg-[#f5a623] py-3 text-sm font-bold text-[#1b2b4b] disabled:opacity-60"
+                  >
+                    {uploadingDash
+                      ? en
+                        ? "Uploading..."
+                        : "Ina-upload..."
+                      : en
+                        ? `Submit ${dashFiles.length} Document(s)`
+                        : `Isumite ang ${dashFiles.length} Dokumento`}
+                  </button>
+                )}
+
+                {renderTutorialCard(
+                  "verification-upload",
+                  "top-full left-1/2 -translate-x-1/2 mt-4 w-[300px] sm:w-[320px]",
+                )}
+              </div>
+            )}
 
           <section
             id="latest-updates"
