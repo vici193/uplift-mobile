@@ -322,11 +322,6 @@ function HomePage() {
                 </li>
                 <li>{en ? "Front of Driver's License" : "Harap ng Driver's License"}</li>
                 <li>{en ? "Back of Driver's License" : "Likod ng Driver's License"}</li>
-                <li>
-                  {en
-                    ? "Supporting document (OR/CR, franchise cert, etc.)"
-                    : "Suportang dokumento (OR/CR, franchise cert, atbp.)"}
-                </li>
               </ul>
 
               {driver?.verification_status === "rejected" && (
