@@ -281,7 +281,7 @@ function LoginPage() {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-[13px] font-semibold text-[#1b2b4b]">
-              {en ? "Password" : "password"}
+              {en ? "Password" : "Password"}
             </span>
             <div className="relative">
               <input
